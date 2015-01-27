@@ -6,6 +6,9 @@
 # Created in 2013 by Alok Goyal
 #
 # Changelog
+# v3.3		Modified on 27 Jan 2015 by Ventsislav Zhechev
+# Now we support term search functionality.
+#
 # v3.2.2	Modified on 27 Jan 2015 by Ventsislav Zhechev
 # Modified the sorting order for term lists created by product/language combination to be alphabetic by source term.
 #
@@ -585,13 +588,15 @@ def TermList():
 	if not jobID:
 		langID = request.args.get('langID', '')
 		prodID = request.args.get('prodID', '')
-		if not langID or langID == '0':
-			if not prodID or prodID == '0':
-				return redirect('JobList.html')
-			else:
-				return redirect('TermListProduct.html?productID=%s' % prodID)
-		elif not prodID or prodID == '0':
-			return redirect('TermListLanguage.html?languageID=%s' % langID)
+		search = request.args.get('search', '')
+		if not search or search == '':
+			if not langID or langID == '0':
+				if not prodID or prodID == '0':
+					return redirect('JobList.html')
+				else:
+					return redirect('TermListProduct.html?productID=%s' % prodID)
+			elif not prodID or prodID == '0':
+				return redirect('TermListLanguage.html?languageID=%s' % langID)
 	
 	userID = 0
 	userFirstName = ""
@@ -607,7 +612,18 @@ def TermList():
 	if jobID:
 		cursor.execute("select * from TermList where JobID = %s order by Term asc" % jobID)
 	else:
-		cursor.execute("select * from TermList where LangCode3Ltr = (select LangCode3Ltr from TargetLanguages where ID = %s) and ProductCode = (select ProductCode from Products where ID = %s) order by Term asc" % (langID, prodID))
+		if not search or search == '':
+			cursor.execute("select * from TermList where LangCode3Ltr = (select LangCode3Ltr from TargetLanguages where ID = %s) and ProductCode = (select ProductCode from Products where ID = %s) order by Term asc" % (langID, prodID))
+		else:
+			if not langID or langID == '0':
+				if not prodID or prodID == '0':
+					cursor.execute("select * from TermList where Term like '%s' order by Term asc" % conn.escape_string(search))
+				else:
+					cursor.execute("select * from TermList where Term like '%s' and ProductCode = (select ProductCode from Products where ID = %s) order by Term asc" % (conn.escape_string(search), prodID))
+			elif not prodID or prodID == '0':
+				cursor.execute("select * from TermList where Term like '%s' and LangCode3Ltr = (select LangCode3Ltr from TargetLanguages where ID = %s) order by Term asc" % (conn.escape_string(search), langID))
+			else:
+				cursor.execute("select * from TermList where Term like '%s' and LangCode3Ltr = (select LangCode3Ltr from TargetLanguages where ID = %s) and ProductCode = (select ProductCode from Products where ID = %s) order by Term asc" % (conn.escape_string(search), langID, prodID))
 	terms = cursor.fetchall()
 	recentLangs = recentLanguages(cursor)
 	recentProds = recentProducts(cursor)
