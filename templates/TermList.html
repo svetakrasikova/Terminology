@@ -1,19 +1,19 @@
 {% extends "TermListBase.html" %}
 {% block title %}Term List{% endblock %}
-{% block currentJob %}{{ super() }}{% endblock currentJob %}
+{% block currentJob %}{% if not searchTerm %}{{ super() }}{% endif %}{% endblock currentJob %}
 {% block sidebarLanguages %}{{ super() }}{% endblock sidebarLanguages %}
 {% block sidebarProducts %}{{ super() }}{% endblock sidebarProducts %}
 {% block sidebarJobs %}{{ super() }}{% endblock sidebarJobs %}
 {% block contentTypeList %}{{super()}}{% endblock contentTypeList %}
-		{% block contentTitle %}Terminology translation for{% if terms %}<br/>{{productName}}, {{language}}{% else %} {{jobString}}{% endif %}{% endblock contentTitle %}
+		{% block contentTitle %}Terminology translation{% if terms %}{% if searchTerm %}{% if productName or language %} for {% if productName %}{{productName}}{% endif %}{% if productName and language %}, {% endif %}{% if language %}{{language}}{% endif %}{% endif %}{% else %} for<br/>{{productName}}, {{language}}{% endif %}{% elif jobString %} for {{jobString}}{% endif %}{% if searchTerm %}<br/>{% if terms %}Showing terms containing{% else %}You searched for{% endif %} <em>{{searchTerm}}</em>{% endif %}{% endblock contentTitle %}
 		{% if terms %}
-		{% set contentColumnCount = 13+1 %}
-		{% block contentProductColumnHeader %}{% endblock contentProductColumnHeader %}
-		{% block contentLanguageColumnHeader %}{% endblock contentLanguageColumnHeader %}
+		{% if searchTerm %}{% set contentColumnCount = 13+3 %}{% else %}{% set contentColumnCount = 13+1 %}{% endif %}
+		{% block contentProductColumnHeader %}{% if searchTerm %}{{ super() }}{% endif %}{% endblock contentProductColumnHeader %}
+		{% block contentLanguageColumnHeader %}{% if searchTerm %}{{ super() }}{% endif %}{% endblock contentLanguageColumnHeader %}
 		{% block contentContentColumnHeader %}{{ super() }}{% endblock contentContentColumnHeader %}
-		{% block contentProductColumnData %}{% endblock contentProductColumnData %}
-		{% block contentLanguageColumnData %}{% endblock contentLanguageColumnData %}
+		{% block contentProductColumnData %}{% if searchTerm %}{{ super() }}{% endif %}{% endblock contentProductColumnData %}
+		{% block contentLanguageColumnData %}{% if searchTerm %}{{ super() }}{% endif %}{% endblock contentLanguageColumnData %}
 		{% block contentContentColumnData %}{{ super() }}{% endblock contentContentColumnData %}
 		{% else %}
-		{% block contentNoTerms %}No terms were extracted or the job is still pending.{% endblock contentNoTerms %}
+		{% block contentNoTerms %}{% if searchTerm %}No terms found matching your search query.{% else %}No terms were extracted or the job is still pending.{% endif %}{% endblock contentNoTerms %}
 		{% endif %}

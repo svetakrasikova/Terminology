@@ -584,6 +584,7 @@ def TermList():
 	jobID = 0
 	langID = 0
 	prodID = 0
+	search = ""
 	jobID = request.args.get('jobID', '')
 	if not jobID:
 		langID = request.args.get('langID', '')
@@ -609,21 +610,24 @@ def TermList():
 	
 	conn = connectToDB()
 	cursor = conn.cursor(pymysql.cursors.DictCursor)
+	sql = ""
 	if jobID:
-		cursor.execute("select * from TermList where JobID = %s order by Term asc" % jobID)
+		sql = "select * from TermList where JobID = %s order by Term asc" % jobID
 	else:
 		if not search or search == '':
-			cursor.execute("select * from TermList where LangCode3Ltr = (select LangCode3Ltr from TargetLanguages where ID = %s) and ProductCode = (select ProductCode from Products where ID = %s) order by Term asc" % (langID, prodID))
+			sql = "select * from TermList where LangCode3Ltr = (select LangCode3Ltr from TargetLanguages where ID = %s) and ProductCode = (select ProductCode from Products where ID = %s) order by Term asc" % (langID, prodID)
 		else:
 			if not langID or langID == '0':
 				if not prodID or prodID == '0':
-					cursor.execute("select * from TermList where Term like '%s' order by Term asc" % conn.escape_string(search))
+					sql = "select * from TermList where Term rlike '(^| )%s.*' order by Term asc" % conn.escape_string(search)
 				else:
-					cursor.execute("select * from TermList where Term like '%s' and ProductCode = (select ProductCode from Products where ID = %s) order by Term asc" % (conn.escape_string(search), prodID))
+					sql = "select * from TermList where Term rlike '(^| )%s.*' and ProductCode = (select ProductCode from Products where ID = %s) order by Term asc" % (conn.escape_string(search), prodID)
 			elif not prodID or prodID == '0':
-				cursor.execute("select * from TermList where Term like '%s' and LangCode3Ltr = (select LangCode3Ltr from TargetLanguages where ID = %s) order by Term asc" % (conn.escape_string(search), langID))
+				sql = "select * from TermList where Term rlike '(^| )%s.*' and LangCode3Ltr = (select LangCode3Ltr from TargetLanguages where ID = %s) order by Term asc" % (conn.escape_string(search), langID)
 			else:
-				cursor.execute("select * from TermList where Term like '%s' and LangCode3Ltr = (select LangCode3Ltr from TargetLanguages where ID = %s) and ProductCode = (select ProductCode from Products where ID = %s) order by Term asc" % (conn.escape_string(search), langID, prodID))
+				sql = "select * from TermList where Term rlike '(^| )%s.*' and LangCode3Ltr = (select LangCode3Ltr from TargetLanguages where ID = %s) and ProductCode = (select ProductCode from Products where ID = %s) order by Term asc" % (conn.escape_string(search), langID, prodID)
+	logger.debug("Selecting terms to display using following SQL:\n"+sql)
+	cursor.execute(sql)
 	terms = cursor.fetchall()
 	recentLangs = recentLanguages(cursor)
 	recentProds = recentProducts(cursor)
@@ -634,14 +638,28 @@ def TermList():
 		cursor.execute("update Products set LastUsed=CURRENT_TIMESTAMP where ProductCode='%s' limit 1" % terms[0]['ProductCode'])
 		conn.commit()
 		conn.close()
+		language = ""
+		productCode = ""
+		productName = ""
+		contentType = ""
+		if not search or (langID or prodID):
+			if not search or langID:
+				language = terms[0]['LangName']
+			if not search:
+				productCode = terms[0]['ProductCode']
+			if not search or prodID:
+				productName = terms[0]['ProductName']
+			if not search:
+				contentType = terms[0]['ContentType']
 		return render_template('TermList.html',
 			jobID = jobID,
 			langID = langID,
 			prodID = prodID,
-			language = terms[0]['LangName'],
-			productCode = terms[0]['ProductCode'],
-			productName = terms[0]['ProductName'],
-			contentType = terms[0]['ContentType'],
+			searchTerm = search,
+			language = language,
+			productCode = productCode,
+			productName = productName,
+			contentType = contentType,
 			recentLanguages = recentLangs,
 			recentProducts = recentProds,
 			latestJobs = lateJobs,
@@ -666,9 +684,14 @@ def TermList():
 	else:
 		cursor.execute("select concat_ws(', ', ProductName, LangName) as JobString from Products, TargetLanguages where Products.ID = %s and TargetLanguages.ID = %s limit 1" % (prodID, langID))
 		jobString = cursor.fetchone()
+		if not jobString:
+			jobStringTxt = ""
+		else:
+			jobStringTxt = jobString['JobString']
 		conn.close()
 		return render_template('TermList.html',
-			jobString = jobString['JobString'],
+			jobString = jobStringTxt,
+			searchTerm = search,
 			recentLanguages = recentLangs,
 			recentProducts = recentProds,
 			latestJobs = lateJobs,
