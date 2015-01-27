@@ -1,7 +1,7 @@
 $('#logoutLink') .click(logout);
 $('.sidebarTitle') .click(slideMenu);
 $('.quickAccessJobs') .click(function() {window.open('JobList.html?langID='+$('#languageAccessJobs').val()+'&prodID='+$('#productAccessJobs').val(), '_self', false);return false;});
-$('.quickAccessTerms') .click(function() {window.open('TermList.html?langID='+$('#languageAccessTerms').val()+'&prodID='+$('#productAccessTerms').val(), '_self', false);return false;});
+$('.quickAccessTerms') .click(function() {window.open('TermList.html?langID='+$('#languageAccessTerms').val()+'&prodID='+$('#productAccessTerms').val()+($('#termSearch').val() ? "&search="+encodeURIComponent($('#termSearch').val()) : ""), '_self', false);return false;});
 $('.tbxExportTerms') .click(function() {window.open('terminology.tbx?langID='+$('#tbxExportLanguage').val()+'&prodID='+$('#tbxExportProduct').val(), '_self', false);return false;});
 
 function logout(evt) {
