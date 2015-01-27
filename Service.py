@@ -619,14 +619,14 @@ def TermList():
 		else:
 			if not langID or langID == '0':
 				if not prodID or prodID == '0':
-					sql = "select * from TermList where Term rlike '(^| )%s.*' order by Term asc" % conn.escape_string(search)
+					sql = "select * from TermList where Term rlike '(^| )%s.*' order by LangCode3Ltr asc, Term asc, ProductName asc" % conn.escape_string(search)
 				else:
-					sql = "select * from TermList where Term rlike '(^| )%s.*' and ProductCode = (select ProductCode from Products where ID = %s) order by Term asc" % (conn.escape_string(search), prodID)
+					sql = "select * from TermList where Term rlike '(^| )%s.*' and ProductCode = (select ProductCode from Products where ID = %s) order by LangCode3Ltr asc, Term asc" % (conn.escape_string(search), prodID)
 			elif not prodID or prodID == '0':
-				sql = "select * from TermList where Term rlike '(^| )%s.*' and LangCode3Ltr = (select LangCode3Ltr from TargetLanguages where ID = %s) order by Term asc" % (conn.escape_string(search), langID)
+				sql = "select * from TermList where Term rlike '(^| )%s.*' and LangCode3Ltr = (select LangCode3Ltr from TargetLanguages where ID = %s) order by Term asc, ProductName asc" % (conn.escape_string(search), langID)
 			else:
 				sql = "select * from TermList where Term rlike '(^| )%s.*' and LangCode3Ltr = (select LangCode3Ltr from TargetLanguages where ID = %s) and ProductCode = (select ProductCode from Products where ID = %s) order by Term asc" % (conn.escape_string(search), langID, prodID)
-	logger.debug("Selecting terms to display using following SQL:\n"+sql)
+# 	logger.debug("Selecting terms to display using following SQL:\n"+sql)
 	cursor.execute(sql)
 	terms = cursor.fetchall()
 	recentLangs = recentLanguages(cursor)
@@ -642,15 +642,16 @@ def TermList():
 		productCode = ""
 		productName = ""
 		contentType = ""
-		if not search or (langID or prodID):
-			if not search or langID:
+		if not search or search == "":
+			language = terms[0]['LangName']
+			productCode = terms[0]['ProductCode']
+			productName = terms[0]['ProductName']
+			contentType = terms[0]['ContentType']
+		else:
+			if langID and langID != '0':
 				language = terms[0]['LangName']
-			if not search:
-				productCode = terms[0]['ProductCode']
-			if not search or prodID:
+			if prodID and prodID != '0':
 				productName = terms[0]['ProductName']
-			if not search:
-				contentType = terms[0]['ContentType']
 		return render_template('TermList.html',
 			jobID = jobID,
 			langID = langID,

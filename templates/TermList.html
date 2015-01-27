@@ -5,7 +5,7 @@
 {% block sidebarProducts %}{{ super() }}{% endblock sidebarProducts %}
 {% block sidebarJobs %}{{ super() }}{% endblock sidebarJobs %}
 {% block contentTypeList %}{{super()}}{% endblock contentTypeList %}
-		{% block contentTitle %}Terminology translation{% if terms %}{% if searchTerm %}{% if productName or language %} for {% if productName %}{{productName}}{% endif %}{% if productName and language %}, {% endif %}{% if language %}{{language}}{% endif %}{% endif %}{% else %} for<br/>{{productName}}, {{language}}{% endif %}{% elif jobString %} for {{jobString}}{% endif %}{% if searchTerm %}<br/>{% if terms %}Showing terms containing{% else %}You searched for{% endif %} <em>{{searchTerm}}</em>{% endif %}{% endblock contentTitle %}
+		{% block contentTitle %}Terminology translation{% if terms %}{% if searchTerm %}{% if productName or language %} for{% if productName and language %}<br/>{% else %} {% endif %}{% if productName %}{{productName}}{% endif %}{% if productName and language %}, {% endif %}{% if language %}{{language}}{% endif %}{% endif %}{% else %} for<br/>{{productName}}, {{language}}{% endif %}{% elif jobString %} for {{jobString}}{% endif %}{% if searchTerm %}<br/>{% if terms %}Showing terms containing{% else %}You searched for{% endif %} <em>{{searchTerm}}</em>{% endif %}{% endblock contentTitle %}
 		{% if terms %}
 		{% if searchTerm %}{% set contentColumnCount = 13+3 %}{% else %}{% set contentColumnCount = 13+1 %}{% endif %}
 		{% block contentProductColumnHeader %}{% if searchTerm %}{{ super() }}{% endif %}{% endblock contentProductColumnHeader %}
