@@ -6,6 +6,9 @@
 # Created in 2013 by Alok Goyal
 #
 # Changelog
+# v3.2.2	Modified on 27 Jan 2015 by Ventsislav Zhechev
+# Modified the sorting order for term lists created by product/language combination to be alphabetic by source term.
+#
 # v3.2.1	Modified on 16 Jan 2015 by Ventsislav Zhechev
 # Fixed a bug with the exception handling during MT processing.
 #
@@ -58,7 +61,7 @@
 #
 #####################
 
-isStaging = False
+isStaging = True
 
 dbName = "Terminology"
 if (isStaging):
@@ -406,7 +409,6 @@ def termharvest():
 	try:
 		if len(threads) > 0:
 			sql = "insert into PendingJobs(ContentTypeID, ProductID, LanguageID) values (%s, %s, %s)" % (contentID, prods[0][0], language[0])
-#			logger.debug("SQL: %s\n" % sql)
 			cursor.execute(sql)
 			jobID = conn.insert_id()
 			conn.commit()
@@ -448,7 +450,6 @@ def index():
 		cryptoPass = key.encrypt(password.encode('utf-16le'), padmode=pyDes.PAD_PKCS5).encode('base64').rstrip()
 		username = escape(form.username.data.lower()).encode('ascii', 'xmlcharrefreplace')
 		logger.debug("Username:" + username)
-#		logger.debug(render_template('authentication.xml', username=username, password=cryptoPass.encode('base64').rstrip()))
 		xmlResult = urllib2.urlopen(urllib2.Request(url="https://lsweb.autodesk.com/WWLAdminDS/WWLAdminDS.asmx", data=render_template('authentication.xml', username=username, password=cryptoPass), headers={"SOAPAction": "http://tempuri.org/GetUserAuth", "Content-Type": "text/xml; charset=utf-8"})).read()
 # 		logger.debug(xmlResult.decode("utf-8"))
 		result = re.search('<GetUserAuthResult>.*<ID_USER>(\d+)</ID_USER>.*<FIRSTNAME>([\w \'-]+)</FIRSTNAME>.*<LASTNAME>([\w \'-]+)</LASTNAME>.*</GetUserAuthResult>', xmlResult.decode("utf-8"), re.U)
@@ -606,7 +607,7 @@ def TermList():
 	if jobID:
 		cursor.execute("select * from TermList where JobID = %s order by Term asc" % jobID)
 	else:
-		cursor.execute("select * from TermList where LangCode3Ltr = (select LangCode3Ltr from TargetLanguages where ID = %s) and ProductCode = (select ProductCode from Products where ID = %s) order by DateRequested desc, Term asc" % (langID, prodID))
+		cursor.execute("select * from TermList where LangCode3Ltr = (select LangCode3Ltr from TargetLanguages where ID = %s) and ProductCode = (select ProductCode from Products where ID = %s) order by Term asc" % (langID, prodID))
 	terms = cursor.fetchall()
 	recentLangs = recentLanguages(cursor)
 	recentProds = recentProducts(cursor)
@@ -989,8 +990,6 @@ def LanguageList():
 	cursor = conn.cursor(pymysql.cursors.DictCursor)
 	cursor.execute("select * from LanguageList")
 	languages = cursor.fetchall()
-#	import pprint
-#	pprint.PrettyPrinter(indent=2).pprint(jobs)
 	recentProds = recentProducts(cursor)
 	lateJobs = latestJobs(cursor)
 	quickAccess = buildQuickAccess(cursor)
