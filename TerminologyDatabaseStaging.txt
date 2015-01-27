@@ -678,7 +678,11 @@ INSERT INTO Terminology.Products (ProductCode, ProductName, GlossID, LastUpdate,
 INSERT INTO Terminology.Products (ProductCode, ProductName, GlossID, LastUpdate, LastUsed) VALUES ('ST', 'AutoCAD Alias / Alias Surface', 56, null, null);
 INSERT INTO Terminology.Products (ProductCode, ProductName, GlossID, LastUpdate, LastUsed) VALUES ('UTLDESN', 'Autodesk Utilities Design', 72, null, null);
 INSERT INTO Terminology.Products (ProductCode, ProductName, GlossID, LastUpdate, LastUsed) VALUES ('VRED', 'Autodesk VRED', 73, null, null);
+INSERT INTO Terminology.Products (ProductCode, ProductName, GlossID, LastUpdate, LastUsed) VALUES ('ALSSF', 'Alias Speedform', 56, null, null);
+INSERT INTO Terminology.Products (ProductCode, ProductName, GlossID, LastUpdate, LastUsed) VALUES ('INVHSM', 'Autodesk Inventor HSM', 29, null, null);
 
 DELETE FROM Terminology.Glossaries WHERE ID = 31;
 DELETE FROM Terminology.Glossaries WHERE ID = 49;
 
+select * from TermList where JobID = 1379
+delete from PendingJobs where ID >= 1380
