@@ -6,6 +6,9 @@
 # Created in 2013 by Alok Goyal
 #
 # Changelog
+# v3.3.1	Modified on 28 Jan 2015 by Ventsislav Zhechev
+# Improved user-friendliness during search, by maintaining the selected search options after performing the search.
+#
 # v3.3		Modified on 27 Jan 2015 by Ventsislav Zhechev
 # Now we support term search functionality.
 #
@@ -633,25 +636,35 @@ def TermList():
 	recentProds = recentProducts(cursor)
 	lateJobs = latestJobs(cursor)
 	quickAccess = buildQuickAccess(cursor)
+	language = ""
+	productName = ""
+	if jobID:
+		cursor.execute("select LangName, ProductName from JobList where JobID = %s limit 1" % jobID)
+		result = cursor.fetchone()
+		if result:
+			language = result['LangName']
+			productName = result['ProductName']
+	else:
+		if langID and langID != '0':
+			cursor.execute("select LangName from TargetLanguages where ID = %s limit 1" % langID)
+			result = cursor.fetchone()
+			if result:
+				language = result['LangName']
+		if prodID and prodID != '0':
+			cursor.execute("select ProductName from Products where ID = %s limit 1" % prodID)
+			result = cursor.fetchone()
+			if result:
+				productName = result['ProductName']
 	if terms:
 		cursor.execute("update TargetLanguages set LastUsed=CURRENT_TIMESTAMP where LangCode3Ltr='%s' limit 1" % terms[0]['LangCode3Ltr'])
 		cursor.execute("update Products set LastUsed=CURRENT_TIMESTAMP where ProductCode='%s' limit 1" % terms[0]['ProductCode'])
 		conn.commit()
 		conn.close()
-		language = ""
 		productCode = ""
-		productName = ""
 		contentType = ""
 		if not search or search == "":
-			language = terms[0]['LangName']
 			productCode = terms[0]['ProductCode']
-			productName = terms[0]['ProductName']
 			contentType = terms[0]['ContentType']
-		else:
-			if langID and langID != '0':
-				language = terms[0]['LangName']
-			if prodID and prodID != '0':
-				productName = terms[0]['ProductName']
 		return render_template('TermList.html',
 			jobID = jobID,
 			langID = langID,
@@ -675,6 +688,8 @@ def TermList():
 		conn.close()
 		return render_template('TermList.html',
 			jobString = jobString['JobString'],
+			language = language,
+			productName = productName,
 			recentLanguages = recentLangs,
 			recentProducts = recentProds,
 			latestJobs = lateJobs,
@@ -693,6 +708,8 @@ def TermList():
 		return render_template('TermList.html',
 			jobString = jobStringTxt,
 			searchTerm = search,
+			language = language,
+			productName = productName,
 			recentLanguages = recentLangs,
 			recentProducts = recentProds,
 			latestJobs = lateJobs,

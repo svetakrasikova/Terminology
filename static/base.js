@@ -3,6 +3,7 @@ $('.sidebarTitle') .click(slideMenu);
 $('.quickAccessJobs') .click(function() {window.open('JobList.html?langID='+$('#languageAccessJobs').val()+'&prodID='+$('#productAccessJobs').val(), '_self', false);return false;});
 $('#termSearch') .keyup(quickAccessTerms);
 $('.quickAccessTerms') .click(quickAccessTerms);
+$('.quickAccessTermsClear') .click(function() {$('#languageAccessTerms').val(0); $('#productAccessTerms').val(0); $('#termSearch').val(""); return false;});
 $('.tbxExportTerms') .click(function() {window.open('terminology.tbx?langID='+$('#tbxExportLanguage').val()+'&prodID='+$('#tbxExportProduct').val(), '_self', false);return false;});
 
 function quickAccessTerms(evt) {

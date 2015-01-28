@@ -76,7 +76,7 @@
 						{% endfor %}
 					</select></li>
 					<li><input style="text" id="termSearch" title="Search for English Term" placeholder="Search English for…"{% if searchTerm %} value="{{searchTerm}}"{% endif %}></li>
-					<li><a href="#" class="quickAccessTerms">Go!</a></li>
+					<li><table style="width: 100%;"><tbody><tr><td><a href="#" class="quickAccessTerms">Go!</a></td><td style="text-align: right;"><a href="#" class="quickAccessTermsClear">Clear…</a></td></tr></tbody></table></li>
 				</ul>
 				<ul>
 					<li>&nbsp;</li>
@@ -150,5 +150,9 @@
 
 <!--script src="static/blur.js"></script-->
 <script src="static/base.js"></script>
+		<script>$(document).ready(function() {
+		{% if productName %}$('#productAccessTerms > option').each(function() { if ($(this).text() === "{{productName}}") {$('#productAccessTerms').val($(this).val())} });{% endif %}
+		{% if language %}$('#languageAccessTerms > option').each(function() { if ($(this).text() === "{{language}}") {$('#languageAccessTerms').val($(this).val())} });{% endif %}
+		});</script>
 </body>
 </html>
