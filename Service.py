@@ -6,6 +6,10 @@
 # Created in 2013 by Alok Goyal
 #
 # Changelog
+# v3.4		Modified on 30 Jan 2015 by Samuel Läubli
+# Term translations are not pushed to SOLR/NeXLT as soon as they are approved. Translations from the Term Translation
+# Central are indexed with the "resource"="Terminology" attribute in SOLR.
+#
 # v3.3.1	Modified on 28 Jan 2015 by Ventsislav Zhechev
 # Improved user-friendliness during search, by maintaining the selected search options after performing the search.
 #
@@ -105,9 +109,11 @@ import traceback
 import socket
 import select
 
-
 import threading
 import Queue
+
+import md5
+import requests
 
 mainKey = "\xE7\xE4\x81\x29\xA1\xE3\x45\x38\xF8\x3A\xDE\x13\x15\xEB\x70\xCE\x5A\x1F\xE3\x31\x00\x00\x00\x00"
 mainIV = "\xDA\x39\xA3\xEE\x5E\x6B\x4B\x0D"
@@ -1250,8 +1256,12 @@ def translateTerm():
 	cursor.execute("update TermTranslations set IgnoreTerm=b'%s', TermTranslation='%s', TranslateUserID='%s', Verified=b'%s', Approved=b'%s' where TermTranslations.ID=%s limit 1" % (content['IgnoreTerm'], conn.escape_string(content['TermTranslation']), content['UserID'], content['Verified'], content['Approved'], content['TermID']))
 	conn.commit()
 	cursor.execute("select * from TermList where TermID=%s limit 1" % content['TermID'])
+	termTranslation = content['TermTranslation']
 	content, = cursor.fetchall()
 	conn.close()
+	# push approved term translation to SOLR/NeXLT
+	if (content['Approved'] == '\x01'): # \x01 = binary TRUE from DB; \x00 = binary FALSE
+		pushTermTranslationToSOLR("enu", content['Term'], content['LangCode3Ltr'], termTranslation, content['ProductCode'], content['ProductName'])
 	content['DateRequested'] = str(content['DateRequested'])
 	content['DateUpdated'] = str(content['DateUpdated'])
 	content['DateTranslated'] = str(content['DateTranslated'])
@@ -1270,6 +1280,107 @@ def cleanup(*args):
 		for t in threads:
 			t.join()
 	sys.exit(0)
+
+def pushTermTranslationToSOLR(sourceLanguage, termSourceLanguage, targetLanguage, termTargetLanguage, productCode, productName):
+	'''
+	Pushes a term translation to SOLR and thus makes
+	it available in NeXLT.
+	
+	If this application is run in STAGING mode, the
+	term translation will be pushed to SOLR staging.
+	
+	@param sourceLanguage the 3-letter code of the
+	       source language; normally "enu"
+	@param termSourceLanguage the term in the source
+	       language, e.g., "data collection settings"
+	@param targetLanguage the 3-letter code of the
+	       target language, e.g., "deu"
+	@param termTargetLanguage the term in the target
+	       language, i.e., the translation of @param
+	       termSource Language. Example: "Einstellungen 
+	       zur Datenerfassung"
+	@param productCode the code of the product the term
+	       stems from, e.g., "CIV3D"
+	@param productName the full name of the product the
+	       term stems from, e.g., "AutoCAD Civil 3D"
+	'''
+	# settings
+	solr_host_prd = "http://aws.prd.solr:8983" #production
+	solr_host_stg = "http://aws.stg.solr:8983" #staging
+	solr_request_path = "/solr/update/json"
+	# helper functions
+	def getTermIdentifier(termSourceLanguage=termSourceLanguage, productCode=productCode):
+		'''
+		Composes the unique identifier for a (source) term
+		in SORL.
+		
+		@param termSourceLanguage the term in the source
+	           language, e.g., "data collection settings"
+	    @param productCode the code of the product the term
+	           stems from, e.g., "CIV3D"
+	    @return the unique SORL identifier (md5 hash) 
+		'''
+		identifier = u"\xef\xa3\xbf".join([termSourceLanguage, productCode, "Terminology"]).encode("utf-8")
+		hash_identifier = md5.new(identifier)
+		return hash_identifier.hexdigest()
+	# compose REST call
+	json_request = """{
+	   "add":{
+	      "doc":{
+	         "resource":{
+	            "set":"Terminology"
+	         },
+	         "product":{
+	            "set": %s
+	         },
+	         "productname":{
+	            "remove": %s
+	         },
+	         "id": %s,
+	         %s :{
+	            "set": %s
+	         },
+	         %s :{
+	            "set": %s
+	         },
+	         "srclc":{
+	            "set": %s
+	         }
+	      }
+	   },
+	   "add":{
+	      "doc":{
+	         "id": %s,
+	         "productname":{
+	            "add": %s
+	         }
+	      }
+	   },
+	   "commit": {}
+	}""" % (json.dumps(productCode), 
+		json.dumps(productName),
+		json.dumps(getTermIdentifier()), 
+		json.dumps(sourceLanguage),
+		json.dumps(termSourceLanguage),
+		json.dumps(targetLanguage),
+		json.dumps(termTargetLanguage),
+		json.dumps(termSourceLanguage.lower()),
+		json.dumps(getTermIdentifier()),
+		json.dumps(productName))
+	json_headers = {'Content-type': 'application/json'}
+	# fire REST call
+	request_url = solr_host_stg + solr_request_path if (isStaging) else solr_host_prd + solr_request_path
+	try:
+		response = requests.post(request_url, data=json_request, headers=json_headers)
+		logger.info("Pushed approved term translation for '%s' (%s) to SORL/NeXLT." % (termSourceLanguage, targetLanguage))
+	except:
+		error = sys.exc_info()
+		logger.warning("Could not push approved term translation for '%s' (%s) to SORL/NeXLT. Reason: %s" % (termSourceLanguage, targetLanguage, error))
+		logger.debug("Request: " + json_request)
+		try:
+			logger.debug("Response: " + response)
+		except:
+			pass
 	
 
 jobQueue = Queue.Queue()
