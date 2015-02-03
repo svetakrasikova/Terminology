@@ -568,7 +568,6 @@ def isAuthorised():
 	else:
 		return ('NO', 401)
 
-
 @app.route('/TermList.perl', methods=['GET'])
 def TermListPerl():
 	language = request.args.get('language', '')
@@ -590,10 +589,15 @@ def TermListPerl():
 	perlHash += '}'
 	return (perlHash, 200)
 
+def buildPagination(dataOffset, dataPageSize, dataRecords):
+	
+	return render_template("Pagination.html")
+
 @app.route('/TermList.html', methods=['GET'])
 def TermList():
 	dataOffset = request.args.get('offset', 0)
 	dataPageSize = request.args.get('perPage', 10)
+	dataRecords = request.args.get('total', 0)
 
 	jobID = 0
 	langID = 0
@@ -626,22 +630,27 @@ def TermList():
 	cursor = conn.cursor(pymysql.cursors.DictCursor)
 	sql = ""
 	if jobID:
-		sql = "select * from TermList where JobID = %s order by Term asc limit %s offset %s" % (jobID, dataPageSize, dataOffset)
+		sql = " from TermList where JobID = %s order by Term asc" % jobID
 	else:
 		if not search or search == '':
-			sql = "select * from TermList where LangCode3Ltr = (select LangCode3Ltr from TargetLanguages where ID = %s) and ProductCode = (select ProductCode from Products where ID = %s) order by Term asc limit %s offset %s" % (langID, prodID, dataPageSize, dataOffset)
+			sql = " from TermList where LangCode3Ltr = (select LangCode3Ltr from TargetLanguages where ID = %s) and ProductCode = (select ProductCode from Products where ID = %s) order by Term asc" % (langID, prodID)
 		else:
 			if not langID or langID == '0':
 				if not prodID or prodID == '0':
-					sql = "select * from TermList where Term rlike '(^| )%s.*' order by LangCode3Ltr asc, Term asc, ProductName asc limit %s offset %s" % (conn.escape_string(search), dataPageSize, dataOffset)
+					sql = " from TermList where Term rlike '(^| )%s.*' order by LangCode3Ltr asc, Term asc, ProductName asc" % conn.escape_string(search)
 				else:
-					sql = "select * from TermList where Term rlike '(^| )%s.*' and ProductCode = (select ProductCode from Products where ID = %s) order by LangCode3Ltr asc, Term asc limit %s offset %s" % (conn.escape_string(search), prodID, dataPageSize, dataOffset)
+					sql = " from TermList where Term rlike '(^| )%s.*' and ProductCode = (select ProductCode from Products where ID = %s) order by LangCode3Ltr asc, Term asc" % (conn.escape_string(search), prodID)
 			elif not prodID or prodID == '0':
-				sql = "select * from TermList where Term rlike '(^| )%s.*' and LangCode3Ltr = (select LangCode3Ltr from TargetLanguages where ID = %s) order by Term asc, ProductName asc limit %s offset %s" % (conn.escape_string(search), langID, dataPageSize, dataOffset)
+				sql = " from TermList where Term rlike '(^| )%s.*' and LangCode3Ltr = (select LangCode3Ltr from TargetLanguages where ID = %s) order by Term asc, ProductName asc" % (conn.escape_string(search), langID)
 			else:
-				sql = "select * from TermList where Term rlike '(^| )%s.*' and LangCode3Ltr = (select LangCode3Ltr from TargetLanguages where ID = %s) and ProductCode = (select ProductCode from Products where ID = %s) order by Term asc limit %s offset %s" % (conn.escape_string(search), langID, prodID, dataPageSize, dataOffset)
-	logger.debug("Selecting terms to display using following SQL:\n"+sql)
-	cursor.execute(sql)
+				sql = " from TermList where Term rlike '(^| )%s.*' and LangCode3Ltr = (select LangCode3Ltr from TargetLanguages where ID = %s) and ProductCode = (select ProductCode from Products where ID = %s) order by Term asc" % (conn.escape_string(search), langID, prodID)
+	if not dataRecords or dataRecords == '0':
+		logger.debug("Counting total terms using following SQL:\n"+"select count(TermID) as Records"+sql)
+		cursor.execute("select count(TermID) as Records"+sql)
+		recordCount = cursor.fetchone()
+		dataRecords = recordCount['Records']
+	logger.debug("Selecting terms to display using following SQL:\n"+"select *"+sql+" limit %s offset %s" % (dataPageSize, dataOffset))
+	cursor.execute("select *"+sql+" limit %s offset %s" % (dataPageSize, dataOffset))
 	terms = cursor.fetchall()
 	recentLangs = recentLanguages(cursor)
 	recentProds = recentProducts(cursor)
@@ -677,6 +686,7 @@ def TermList():
 			productCode = terms[0]['ProductCode']
 			contentType = terms[0]['ContentType']
 		return render_template('TermList.html',
+			total = dataRecords,
 			jobID = jobID,
 			langID = langID,
 			prodID = prodID,
@@ -698,6 +708,7 @@ def TermList():
 		jobString = cursor.fetchone()
 		conn.close()
 		return render_template('TermList.html',
+			total = dataRecords,
 			jobString = jobString['JobString'],
 			language = language,
 			productName = productName,
@@ -717,6 +728,7 @@ def TermList():
 			jobStringTxt = jobString['JobString']
 		conn.close()
 		return render_template('TermList.html',
+			total = dataRecords,
 			jobString = jobStringTxt,
 			searchTerm = search,
 			language = language,
