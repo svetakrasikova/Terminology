@@ -7,7 +7,7 @@
 {% block contentTypeList %}{{super()}}{% endblock contentTypeList %}
 		{% block contentTitle %}Terminology translation{% if terms %}{% if searchTerm %}{% if productName or language %} for{% if productName and language %}<br/>{% else %} {% endif %}{% if productName %}{{productName}}{% endif %}{% if productName and language %}, {% endif %}{% if language %}{{language}}{% endif %}{% endif %}{% else %} for<br/>{{productName}}, {{language}}{% endif %}{% elif jobString %} for {{jobString}}{% endif %}{% if searchTerm %}<br/>{% if terms %}Showing terms containing{% else %}You searched for{% endif %} <em>{{searchTerm}}</em>{% endif %}{% endblock contentTitle %}
 		{% if terms %}
-		{% if searchTerm %}{% if productName and language %}{% set contentColumnCount = 13+1 %}{% elif productName or language %}{% set contentColumnCount = 13+2 %}{% else %}{% set contentColumnCount = 13+3 %}{% endif %}{% else %}{% set contentColumnCount = 13+1 %}{% endif %}
+		{% if searchTerm %}{% if productName and language %}{% set contentColumnCount = 11+1 %}{% elif productName or language %}{% set contentColumnCount = 11+2 %}{% else %}{% set contentColumnCount = 11+3 %}{% endif %}{% else %}{% set contentColumnCount = 11+1 %}{% endif %}
 		{% block contentProductColumnHeader %}{% if searchTerm and not productName %}{{ super() }}{% endif %}{% endblock contentProductColumnHeader %}
 		{% block contentLanguageColumnHeader %}{% if searchTerm and not language %}{{ super() }}{% endif %}{% endblock contentLanguageColumnHeader %}
 		{% block contentContentColumnHeader %}{{ super() }}{% endblock contentContentColumnHeader %}
