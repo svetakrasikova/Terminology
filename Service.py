@@ -255,7 +255,7 @@ def MT(content, language):
 				for string in contentList:
 					send.write(string.encode('utf-8') + "\n")
 				
-				logger.info("All strings written to: %s:%s" % mt_socket.getpeername())            
+				logger.info("All strings written to: %s:%s" % mt_socket.getpeername())
 			except Exception, e:
 				logger.debug(traceback.format_exc())
 				raise e
@@ -589,10 +589,6 @@ def TermListPerl():
 	perlHash += '}'
 	return (perlHash, 200)
 
-def buildPagination(dataOffset, dataPageSize, dataRecords):
-	
-	return render_template("Pagination.html")
-
 @app.route('/TermList.html', methods=['GET'])
 def TermList():
 	dataOffset = request.args.get('offset', 0)
@@ -686,6 +682,8 @@ def TermList():
 			productCode = terms[0]['ProductCode']
 			contentType = terms[0]['ContentType']
 		return render_template('TermList.html',
+			perPage = dataPageSize,
+			page = (dataOffset / dataPageSize + 1),
 			total = dataRecords,
 			jobID = jobID,
 			langID = langID,
@@ -708,6 +706,8 @@ def TermList():
 		jobString = cursor.fetchone()
 		conn.close()
 		return render_template('TermList.html',
+			perPage = dataPageSize,
+			page = (dataOffset / dataPageSize + 1),
 			total = dataRecords,
 			jobString = jobString['JobString'],
 			language = language,
@@ -728,6 +728,8 @@ def TermList():
 			jobStringTxt = jobString['JobString']
 		conn.close()
 		return render_template('TermList.html',
+			perPage = dataPageSize,
+			page = (dataOffset / dataPageSize + 1),
 			total = dataRecords,
 			jobString = jobStringTxt,
 			searchTerm = search,
