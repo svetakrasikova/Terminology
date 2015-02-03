@@ -56,8 +56,82 @@
 		</div>
 		<div class="tabularContent">
 			<div class="pagination">
-				<input type="hidden" name="total" value="{{ total }}"/>
+				
 			</div>
+			<script>
+				var Paging = $(".pagination").paging({{total}}, {
+					format: ".[<(qq-) nncnn! (-pp)>]",
+					perpage: {{perPage}},
+					page: {{page}},
+					onSelect: function (page) {
+						console.log(this);
+						return true;
+					},
+					onFormat: function(type) {
+						switch (type) {
+						case 'block':
+							if (!this.active)
+								return '<span class="disabled">' + this.value + '</span>';
+							else if (this.value != this.page)
+								return '<a href="' + window.location.href.substr(0, window.location.href.lastIndexOf('#')) + '#' + this.value + '">' + this.value + '</a>';
+							return '<span class="current">' + this.value + '</span>';
+				
+						case 'left':
+							if (!this.active)
+								return '<span style="display: none;">' + this.value + '</span>';
+							else if (this.value != this.page)
+								return '<a href="' + window.location.href.substr(0, window.location.href.lastIndexOf('#')) + '#' + this.value + '">' + this.value + '</a>';
+							return '<span class="current">' + this.value + '</span>';
+				
+						case 'right':
+							if (!this.active)
+								return '<span style="display: none;">' + this.value + '</span>';
+							else if (this.value != this.page)
+								return '<a href="' + window.location.href.substr(0, window.location.href.lastIndexOf('#')) + '#' + this.value + '">' + this.value + '</a>';
+							return '<span class="current">' + this.value + '</span>';
+				
+						case 'next':
+							if (this.active)
+								return '<a href="' + window.location.href.substr(0, window.location.href.lastIndexOf('#')) + '#' + this.value + '" class="next">></a>';
+							return '<span class="disabled">></span>';
+				
+						case 'prev':
+							if (this.active)
+								return '<a href="' + window.location.href.substr(0, window.location.href.lastIndexOf('#')) + '#' + this.value + '" class="prev"><</a>';
+							return '<span class="disabled"><</span>';
+				
+						case 'first':
+							if (this.active)
+								return '<a href="' + window.location.href.substr(0, window.location.href.lastIndexOf('#')) + '#' + this.value + '" class="first"><<</a>';
+							return '<span class="disabled"><<</span>';
+				
+						case 'last':
+							if (this.active)
+								return '<a href="' + window.location.href.substr(0, window.location.href.lastIndexOf('#')) + '#' + this.value + '" class="last">>></a>';
+							return '<span class="disabled">>></span>';
+				
+						case 'leap':
+							if (this.active)
+								return "<span class='stats'>{{total}} terms</span><span class='stats'>page " + this.page + " of " + this.pages + "</span>";
+							return "";
+				
+						case 'fill':
+							if (this.active)
+								return "<span class='ellipsis'>…</span>";
+							return "";
+						}
+					}
+				});
+				$(window).hashchange(function() {
+				
+					if (window.location.hash)
+						Paging.setPage(window.location.hash.substr(1));
+					else
+						Paging.setPage(1); // we dropped the initial page selection and need to run it manually
+				});
+				
+				$(window).hashchange();
+			</script>
 			<table class="viewTable terms">
 				<!--col width="51px"/>
 				<col width="53px"/>
