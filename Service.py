@@ -6,9 +6,11 @@
 # Created in 2013 by Alok Goyal
 #
 # Changelog
+# !!! Subsequent changes tracked on GitHub only !!!
+#
 # v3.4		Modified on 30 Jan 2015 by Samuel Läubli
-# Term translations are not pushed to SOLR/NeXLT as soon as they are approved. Translations from the Term Translation
-# Central are indexed with the "resource"="Terminology" attribute in SOLR.
+# Term translations are not pushed to Solr/NeXLT as soon as they are approved. Translations from the Term Translation
+# Central are indexed with the "resource"="Terminology" attribute in Solr.
 #
 # v3.3.1	Modified on 28 Jan 2015 by Ventsislav Zhechev
 # Improved user-friendliness during search, by maintaining the selected search options after performing the search.
@@ -590,6 +592,9 @@ def TermListPerl():
 
 @app.route('/TermList.html', methods=['GET'])
 def TermList():
+	dataOffset = request.args.get('offset', 0)
+	dataPageSize = request.args.get('perPage', 10)
+
 	jobID = 0
 	langID = 0
 	prodID = 0
@@ -621,21 +626,21 @@ def TermList():
 	cursor = conn.cursor(pymysql.cursors.DictCursor)
 	sql = ""
 	if jobID:
-		sql = "select * from TermList where JobID = %s order by Term asc" % jobID
+		sql = "select * from TermList where JobID = %s order by Term asc limit %s offset %s" % (jobID, dataPageSize, dataOffset)
 	else:
 		if not search or search == '':
-			sql = "select * from TermList where LangCode3Ltr = (select LangCode3Ltr from TargetLanguages where ID = %s) and ProductCode = (select ProductCode from Products where ID = %s) order by Term asc" % (langID, prodID)
+			sql = "select * from TermList where LangCode3Ltr = (select LangCode3Ltr from TargetLanguages where ID = %s) and ProductCode = (select ProductCode from Products where ID = %s) order by Term asc limit %s offset %s" % (langID, prodID, dataPageSize, dataOffset)
 		else:
 			if not langID or langID == '0':
 				if not prodID or prodID == '0':
-					sql = "select * from TermList where Term rlike '(^| )%s.*' order by LangCode3Ltr asc, Term asc, ProductName asc" % conn.escape_string(search)
+					sql = "select * from TermList where Term rlike '(^| )%s.*' order by LangCode3Ltr asc, Term asc, ProductName asc limit %s offset %s" % (conn.escape_string(search), dataPageSize, dataOffset)
 				else:
-					sql = "select * from TermList where Term rlike '(^| )%s.*' and ProductCode = (select ProductCode from Products where ID = %s) order by LangCode3Ltr asc, Term asc" % (conn.escape_string(search), prodID)
+					sql = "select * from TermList where Term rlike '(^| )%s.*' and ProductCode = (select ProductCode from Products where ID = %s) order by LangCode3Ltr asc, Term asc limit %s offset %s" % (conn.escape_string(search), prodID, dataPageSize, dataOffset)
 			elif not prodID or prodID == '0':
-				sql = "select * from TermList where Term rlike '(^| )%s.*' and LangCode3Ltr = (select LangCode3Ltr from TargetLanguages where ID = %s) order by Term asc, ProductName asc" % (conn.escape_string(search), langID)
+				sql = "select * from TermList where Term rlike '(^| )%s.*' and LangCode3Ltr = (select LangCode3Ltr from TargetLanguages where ID = %s) order by Term asc, ProductName asc limit %s offset %s" % (conn.escape_string(search), langID, dataPageSize, dataOffset)
 			else:
-				sql = "select * from TermList where Term rlike '(^| )%s.*' and LangCode3Ltr = (select LangCode3Ltr from TargetLanguages where ID = %s) and ProductCode = (select ProductCode from Products where ID = %s) order by Term asc" % (conn.escape_string(search), langID, prodID)
-# 	logger.debug("Selecting terms to display using following SQL:\n"+sql)
+				sql = "select * from TermList where Term rlike '(^| )%s.*' and LangCode3Ltr = (select LangCode3Ltr from TargetLanguages where ID = %s) and ProductCode = (select ProductCode from Products where ID = %s) order by Term asc limit %s offset %s" % (conn.escape_string(search), langID, prodID, dataPageSize, dataOffset)
+	logger.debug("Selecting terms to display using following SQL:\n"+sql)
 	cursor.execute(sql)
 	terms = cursor.fetchall()
 	recentLangs = recentLanguages(cursor)
@@ -1259,9 +1264,9 @@ def translateTerm():
 	termTranslation = content['TermTranslation']
 	content, = cursor.fetchall()
 	conn.close()
-	# push approved term translation to SOLR/NeXLT
+	# push approved term translation to Solr/NeXLT
 	if (content['Approved'] == '\x01'): # \x01 = binary TRUE from DB; \x00 = binary FALSE
-		pushTermTranslationToSOLR("enu", content['Term'], content['LangCode3Ltr'], termTranslation, content['ProductCode'], content['ProductName'])
+		pushTermTranslationToSolr("enu", content['Term'], content['LangCode3Ltr'], termTranslation, content['ProductCode'], content['ProductName'])
 	content['DateRequested'] = str(content['DateRequested'])
 	content['DateUpdated'] = str(content['DateUpdated'])
 	content['DateTranslated'] = str(content['DateTranslated'])
@@ -1281,49 +1286,29 @@ def cleanup(*args):
 			t.join()
 	sys.exit(0)
 
-def pushTermTranslationToSOLR(sourceLanguage, termSourceLanguage, targetLanguage, termTargetLanguage, productCode, productName):
+def pushTermTranslationToSolr(sourceLanguage, termSourceLanguage, targetLanguage, termTargetLanguage, productCode, productName):
 	'''
-	Pushes a term translation to SOLR and thus makes
-	it available in NeXLT.
+	Pushes a term translation to Solr and thus makes it available in NeXLT.
 	
-	If this application is run in STAGING mode, the
-	term translation will be pushed to SOLR staging.
+	If this application is run in STAGING mode, the term translation will be pushed to Solr staging.
 	
-	@param sourceLanguage the 3-letter code of the
-	       source language; normally "enu"
-	@param termSourceLanguage the term in the source
-	       language, e.g., "data collection settings"
-	@param targetLanguage the 3-letter code of the
-	       target language, e.g., "deu"
-	@param termTargetLanguage the term in the target
-	       language, i.e., the translation of @param
-	       termSource Language. Example: "Einstellungen 
-	       zur Datenerfassung"
-	@param productCode the code of the product the term
-	       stems from, e.g., "CIV3D"
-	@param productName the full name of the product the
-	       term stems from, e.g., "AutoCAD Civil 3D"
+	@param sourceLanguage the 3-letter code of the source language; normally "enu"
+	@param termSourceLanguage the term in the source language, e.g., "data collection settings"
+	@param targetLanguage the 3-letter code of the target language, e.g., "deu"
+	@param termTargetLanguage the term in the target language, i.e., the translation of @paramtermSource Language. Example: "Einstellungen zur Datenerfassung"
+	@param productCode the code of the product the term stems from, e.g., "CIV3D"
+	@param productName the full name of the product the term stems from, e.g., "AutoCAD Civil 3D"
 	'''
 	# settings
 	solr_host_prd = "http://aws.prd.solr:8983" #production
 	solr_host_stg = "http://aws.stg.solr:8983" #staging
-	solr_request_path = "/solr/update/json"
-	# helper functions
-	def getTermIdentifier(termSourceLanguage=termSourceLanguage, productCode=productCode):
-		'''
-		Composes the unique identifier for a (source) term
-		in SORL.
-		
-		@param termSourceLanguage the term in the source
-	           language, e.g., "data collection settings"
-	    @param productCode the code of the product the term
-	           stems from, e.g., "CIV3D"
-	    @return the unique SORL identifier (md5 hash) 
-		'''
-		identifier = u"\xef\xa3\xbf".join([termSourceLanguage, productCode, "Terminology"]).encode("utf-8")
-		hash_identifier = md5.new(identifier)
-		return hash_identifier.hexdigest()
+	solr_request_path = "/search/update/json"
+	
+	# Compose the unique identifier for a (source) term in Solr.
+	termID = md5.new(u"".join([termSourceLanguage, productCode]).encode("utf-8")).hexdigest() + "Terminology"
+	
 	# compose REST call
+	# First remove and then add the full product name to avoid duplicates in this multivalue Solr field.
 	json_request = """{
 	   "add":{
 	      "doc":{
@@ -1359,23 +1344,23 @@ def pushTermTranslationToSOLR(sourceLanguage, termSourceLanguage, targetLanguage
 	   "commit": {}
 	}""" % (json.dumps(productCode), 
 		json.dumps(productName),
-		json.dumps(getTermIdentifier()), 
+		json.dumps(termID), 
 		json.dumps(sourceLanguage),
 		json.dumps(termSourceLanguage),
 		json.dumps(targetLanguage),
 		json.dumps(termTargetLanguage),
 		json.dumps(termSourceLanguage.lower()),
-		json.dumps(getTermIdentifier()),
+		json.dumps(termID),
 		json.dumps(productName))
 	json_headers = {'Content-type': 'application/json'}
 	# fire REST call
 	request_url = solr_host_stg + solr_request_path if (isStaging) else solr_host_prd + solr_request_path
 	try:
 		response = requests.post(request_url, data=json_request, headers=json_headers)
-		logger.info("Pushed approved term translation for '%s' (%s) to SORL/NeXLT." % (termSourceLanguage, targetLanguage))
+# 		logger.info("Pushed approved term translation for '%s' (%s) to Solr." % (termSourceLanguage, targetLanguage))
 	except:
 		error = sys.exc_info()
-		logger.warning("Could not push approved term translation for '%s' (%s) to SORL/NeXLT. Reason: %s" % (termSourceLanguage, targetLanguage, error))
+		logger.warning("Could not push approved term translation for '%s' (%s) to Solr/NeXLT. Reason: %s" % (termSourceLanguage, targetLanguage, error))
 		logger.debug("Request: " + json_request)
 		try:
 			logger.debug("Response: " + response)
