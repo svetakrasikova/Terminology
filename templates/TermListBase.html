@@ -63,6 +63,7 @@
 					format: ".[<(qq-) nncnn! (-pp)>].",
 					perpage: {{perPage}},
 					page: {{page}},
+					lapping: 1,
 					onSelect: function (page) {
 						$.ajax({
 							url: 'TermList.html?langID={{langID}}&prodID={{prodID}}{% if searchTerm %}&search={{searchTerm}}{% endif %}&offset='+this.slice[0]+'&perPage=' + $('#pagerSize').val() + '&total={{total}}&bare=1',

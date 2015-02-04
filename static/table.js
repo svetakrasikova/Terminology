@@ -1,7 +1,3 @@
-$(document).ready(function() {
-    $('table.viewTable').floatThead();
-})
-
 $('.toggleClick') .click(toggleMultipart);
 $('.addCommentButton') .click(addComment);
 $('.submitCommentButton') .click(submitComment);
