@@ -146,7 +146,7 @@
 					Paging.setPage(page);
 					
 						$.ajax({
-							url: 'TermList.html?bare=1{% if langID %}&langID={{langID}}{% endif %}{% if prodID %}&prodID={{prodID}}{% endif %}{% if jobID %}&jobID={{jobID}}{% endif %}{% if searchTerm %}&search={{searchTerm}}{% endif %}&offset='+(perpage * page)+'&perPage='+perpage+'&total={{total}}',
+							url: 'TermList.html?bare=1{% if langID %}&langID={{langID}}{% endif %}{% if prodID %}&prodID={{prodID}}{% endif %}{% if jobID %}&jobID={{jobID}}{% endif %}{% if searchTerm %}&search={{searchTerm}}{% endif %}&offset='+(perpage * (page - 1))+'&perPage='+perpage+'&total={{total}}',
 							type: 'GET',
 							success: function(html) {
 								$('.viewTable >tbody').html(html);
