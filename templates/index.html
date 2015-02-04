@@ -1,4 +1,5 @@
 {% extends "TermListBase.html" %}
+{% set total = 0 %}
 {% block title %}Home{% endblock %}
 {% block loginDetails %}{% if userID %}{{ super() }}{% endif %}{% endblock loginDetails %}
 {% block sidebarLanguages %}{{ super() }}{% endblock sidebarLanguages %}
