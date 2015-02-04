@@ -68,7 +68,7 @@
 							url: 'TermList.html?langID={{langID}}&prodID={{prodID}}{% if searchTerm %}&search={{searchTerm}}{% endif %}&offset='+this.slice[0]+'&perPage=' + $('#pagerSize').val() + '&total={{total}}&bare=1',
 							type: 'GET',
 							success: function(html) {
-								$($.find('thead')[0].nextElementSibling).html(html);
+								$('.viewTable >tbody').html(html);
 								// Re-establish jQuery event handlers
 								$('.toggleClick') .click(toggleMultipart);
 								$('.addCommentButton') .click(addComment);
@@ -148,7 +148,7 @@
 							url: 'TermList.html?langID={{langID}}&prodID={{prodID}}{% if searchTerm %}&search={{searchTerm}}{% endif %}&offset='+(Paging.a.perpage * Paging.a.page)+'&perPage='+perpage+'&total={{total}}&bare=1',
 							type: 'GET',
 							success: function(html) {
-								$($.find('thead')[0].nextElementSibling).html(html);
+								$('.viewTable >tbody').html(html);
 								// Re-establish jQuery event handlers
 								$('.toggleClick') .click(toggleMultipart);
 								$('.addCommentButton') .click(addComment);
