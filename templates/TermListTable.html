@@ -7,8 +7,8 @@
 						<input type="hidden" value="{{ term['HasArchive'] }}"/>
 						<input type="hidden" value="{{ term['HasComments'] }}"/>
 					</td>
-					{% block contentProductColumnData scoped %}<td scope="row" align="center" title="{{ term['ProductName'] }}" style="cursor:help;">{{ term['ProductCode'] }}</td>{% endblock contentProductColumnData %}
-					{% block contentLanguageColumnData scoped %}<td scope="row" align="center">{{ term['LangName'] }}</td>{% endblock contentLanguageColumnData %}
+					{% if showProductColumn %}<td scope="row" align="center" title="{{ term['ProductName'] }}" style="cursor:help;">{{ term['ProductCode'] }}</td>{% endif %}
+					{% if showLanguageColumn %}<td scope="row" align="center">{{ term['LangName'] }}</td>{% endif %}
 					<td scope="row" align="center" id="ignoreField-{{ term['TermID'] }}" class="translateTerm-{{ term['TermID'] }}" style="display: none;"><div class="termCheckbox inverseColour" title="Ignore this Term"><input type="checkbox" name="ignoreTerm" id="ignoreTerm-{{ term['TermID'] }}"{% if term['IgnoreTerm'] == '\x01' %} checked{% endif %} /><label for="ignoreTerm-{{ term['TermID'] }}" /></div></td>
 					<td scope="row" align="center" id="ignoreContent-{{ term['TermID'] }}" class="translateTerm-{{ term['TermID'] }} translateTermToggle {% if term['IgnoreTerm'] == '\x00' %}greenCell{% else %}redCell{% endif %}">{% if term['IgnoreTerm'] == '\x01' %}yes{% else %}no{% endif %}</td>
 					<td scope="row">{{ term['Term'] }}</td>
