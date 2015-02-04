@@ -254,7 +254,7 @@ div .viewSubDiv {padding-left: 52px;}
 .pagination {
 	padding: 3px;
 	margin: 3px;
-	text-align:center;
+	text-align:left;
 }
 
 .pagination a {
