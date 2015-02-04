@@ -66,7 +66,7 @@
 					lapping: 1,
 					onSelect: function (page) {
 						$.ajax({
-							url: 'TermList.html?langID={{langID}}&prodID={{prodID}}{% if searchTerm %}&search={{searchTerm}}{% endif %}&offset='+this.slice[0]+'&perPage=' + $('#pagerSize').val() + '&total={{total}}&bare=1',
+							url: 'TermList.html?bare=1{% if langID %}&langID={{langID}}{% endif %}{% if prodID %}&prodID={{prodID}}{% endif %}{% if jobID %}&jobID={{jobID}}{% endif %}{% if searchTerm %}&search={{searchTerm}}{% endif %}&offset='+this.slice[0]+'&perPage=' + $('#pagerSize').val() + '&total={{total}}',
 							type: 'GET',
 							success: function(html) {
 								$('.viewTable >tbody').html(html);
@@ -146,7 +146,7 @@
 					Paging.setPage();
 					
 						$.ajax({
-							url: 'TermList.html?langID={{langID}}&prodID={{prodID}}{% if searchTerm %}&search={{searchTerm}}{% endif %}&offset='+(Paging.a.perpage * Paging.a.page)+'&perPage='+perpage+'&total={{total}}&bare=1',
+							url: 'TermList.html?bare=1{% if langID %}&langID={{langID}}{% endif %}{% if prodID %}&prodID={{prodID}}{% endif %}{% if jobID %}&jobID={{jobID}}{% endif %}{% if searchTerm %}&search={{searchTerm}}{% endif %}&offset='+(Paging.a.perpage * Paging.a.page)+'&perPage='+perpage+'&total={{total}}',
 							type: 'GET',
 							success: function(html) {
 								$('.viewTable >tbody').html(html);
