@@ -591,28 +591,32 @@ def TermListPerl():
 
 @app.route('/TermList.html', methods=['GET'])
 def TermList():
-	dataOffset = request.args.get('offset', 0)
-	dataPageSize = request.args.get('perPage', 10)
-	dataRecords = request.args.get('total', 0)
+	try:
+		dataOffset = int(request.args.get('offset', 0))
+	except:
+		dataOffset = 0
+	try:
+		dataPageSize = int(request.args.get('perPage', 10))
+	except:
+		dataPageSize = 10
+	try:
+		dataRecords = int(request.args.get('total', 0))
+	except:
+		dataRecords = 0
 	dataOnly = request.args.get('bare', 0)
 
 	jobID = 0
 	langID = 0
 	prodID = 0
 	search = ""
-	jobID = request.args.get('jobID', '')
+	try:
+		jobID = int(request.args.get('jobID', ''))
+	except:
+		jobID = 0
 	if not jobID:
 		langID = request.args.get('langID', '')
 		prodID = request.args.get('prodID', '')
 		search = request.args.get('search', '')
-		if not search or search == '':
-			if not langID or langID == '0':
-				if not prodID or prodID == '0':
-					return redirect('JobList.html')
-				else:
-					return redirect('TermListProduct.html?productID=%s' % prodID)
-			elif not prodID or prodID == '0':
-				return redirect('TermListLanguage.html?languageID=%s' % langID)
 	
 	userID = 0
 	userFirstName = ""
@@ -633,35 +637,51 @@ def TermList():
 		contentColumnCount = contentColumnCount + 1
 		sql = " from TermList where JobID = %s order by Term asc" % jobID
 	else:
+		sql = " from TermList"
 		if not search or search == '':
-			contentColumnCount = contentColumnCount + 1
-			sql = " from TermList where LangCode3Ltr = (select LangCode3Ltr from TargetLanguages where ID = %s) and ProductCode = (select ProductCode from Products where ID = %s) order by Term asc" % (langID, prodID)
+			searchsql = ""
 		else:
-			if not langID or langID == '0':
-				if not prodID or prodID == '0':
-					contentColumnCount = contentColumnCount + 3
-					showProductColumn = True
-					showLanguageColumn = True
-					sql = " from TermList where Term rlike '(^| )%s.*' order by LangCode3Ltr asc, Term asc, ProductName asc" % conn.escape_string(search)
-				else:
-					contentColumnCount = contentColumnCount + 2
-					showLanguageColumn = True
-					sql = " from TermList where Term rlike '(^| )%s.*' and ProductCode = (select ProductCode from Products where ID = %s) order by LangCode3Ltr asc, Term asc" % (conn.escape_string(search), prodID)
-			elif not prodID or prodID == '0':
-				contentColumnCount = contentColumnCount + 2
+			searchsql = " Term rlike '(^| )%s.*' " % conn.escape_string(search)
+		if not langID or langID == '0':
+			if not prodID or prodID == '0':
+				contentColumnCount = contentColumnCount + 3
 				showProductColumn = True
-				sql = " from TermList where Term rlike '(^| )%s.*' and LangCode3Ltr = (select LangCode3Ltr from TargetLanguages where ID = %s) order by Term asc, ProductName asc" % (conn.escape_string(search), langID)
+				showLanguageColumn = True
+				if searchsql:
+					sql = sql + " where" + searchsql
+				sql = sql + " order by LangCode3Ltr asc, Term asc, ProductName asc"
 			else:
-				contentColumnCount = contentColumnCount + 1
-				sql = " from TermList where Term rlike '(^| )%s.*' and LangCode3Ltr = (select LangCode3Ltr from TargetLanguages where ID = %s) and ProductCode = (select ProductCode from Products where ID = %s) order by Term asc" % (conn.escape_string(search), langID, prodID)
+				contentColumnCount = contentColumnCount + 2
+				showLanguageColumn = True
+				if searchsql:
+					searchsql = searchsql + " and"
+				sql = sql + " where" + searchsql + " ProductCode = (select ProductCode from Products where ID = %s) order by LangCode3Ltr asc, Term asc" % prodID
+		elif not prodID or prodID == '0':
+			contentColumnCount = contentColumnCount + 2#
+			showProductColumn = True
+			if searchsql:
+				searchsql = searchsql + " and"
+			sql =  sql + " where" + searchsql + " LangCode3Ltr = (select LangCode3Ltr from TargetLanguages where ID = %s) order by Term asc, ProductName asc" % langID
+		else:
+			contentColumnCount = contentColumnCount + 1
+			if searchsql:
+				searchsql = searchsql + " and"
+			sql =  sql + " where" + searchsql + " LangCode3Ltr = (select LangCode3Ltr from TargetLanguages where ID = %s) and ProductCode = (select ProductCode from Products where ID = %s) order by Term asc" % (langID, prodID)
 	if not dataRecords or dataRecords == '0':
-#  		logger.debug("Counting total terms using following SQL:\n"+"select count(TermID) as Records"+sql)
+		logger.debug("Counting total terms using following SQL:\n"+"select count(TermID) as Records"+sql)
 		cursor.execute("select count(TermID) as Records"+sql)
 		recordCount = cursor.fetchone()
-		dataRecords = recordCount['Records']
-#  	logger.debug("Selecting terms to display using following SQL:\n"+"select *"+sql+" limit %s offset %s" % (dataPageSize, dataOffset))
-	cursor.execute("select *"+sql+" limit %s offset %s" % (dataPageSize, dataOffset))
-	terms = cursor.fetchall()
+		if recordCount:
+			dataRecords = recordCount['Records']
+		else:
+			dataRecords = 0
+	terms = None
+	if dataRecords > 0:
+		if dataOffset >= dataRecords:
+			dataOffset = 0
+		logger.debug("Selecting terms to display using following SQL:\n"+"select *"+sql+" limit %s offset %s" % (dataPageSize, dataOffset))
+		cursor.execute("select *"+sql+" limit %s offset %s" % (dataPageSize, dataOffset))
+		terms = cursor.fetchall()
 	recentLangs = recentLanguages(cursor)
 	recentProds = recentProducts(cursor)
 	lateJobs = latestJobs(cursor)
@@ -674,6 +694,11 @@ def TermList():
 		if result:
 			language = result['LangName']
 			productName = result['ProductName']
+		cursor.execute("select LanguageID, ProductID from PendingJobs where ID = %s limit 1" % jobID)
+		result = cursor.fetchone()
+		if result:
+			langID = result['LanguageID']
+			prodID = result['ProductID']
 	else:
 		if langID and langID != '0':
 			cursor.execute("select LangName from TargetLanguages where ID = %s limit 1" % langID)
@@ -730,6 +755,8 @@ def TermList():
 		conn.close()
 		return render_template('TermList.html',
 			jobString = jobString['JobString'],
+			total = 0,
+			jobID = jobID,
 			language = language,
 			productName = productName,
 			recentLanguages = recentLangs,
@@ -750,6 +777,7 @@ def TermList():
 		return render_template('TermList.html',
 			jobString = jobStringTxt,
 			searchTerm = search,
+			total = 0,
 			language = language,
 			productName = productName,
 			recentLanguages = recentLangs,
@@ -759,176 +787,7 @@ def TermList():
 			userID = userID,
 			userName = userFirstName + " " + userLastName,
 			STAGING = isStaging)
-		
-@app.route('/TermListLanguage.html', methods=['GET'])
-def TermListLanguage():
-	languageID = request.args.get('languageID', '')
-	userID = 0
-	userFirstName = ""
-	userLastName = ""
-	
-	if 'UserID' in session:
-		userID = session['UserID']
-		userFirstName = session['UserFirstName']
-		userLastName = session['UserLastName']
-	
-	conn = connectToDB()
-	cursor = conn.cursor(pymysql.cursors.DictCursor)
-	if not languageID:
-		languageName = request.args.get('languageName', '')
-		if not languageName:
-			return redirect('LanguageList.html')
-		cursor.execute("select ID from TargetLanguages where LangName = '%s' limit 1" % languageName)
-		languageID = cursor.fetchone()['ID']
-		
-	cursor.execute("select distinct TermID, IgnoreTerm, Term, TermTranslation, LangCode3Ltr, LangName, ProductCode, ProductName, ContentType, NewTo, DateRequested, DateUpdated, DateTranslated, TranslateUserID, Verified, VerifyUserID, Approved, ApproveUserID, HasArchive, HasComments from TermList where LangCode3Ltr = (select LangCode3Ltr from TargetLanguages where ID = %s) order by Term asc, ProductName asc" % languageID)
-	terms = cursor.fetchall()
-	recentLangs = recentLanguages(cursor)
-	recentProds = recentProducts(cursor)
-	lateJobs = latestJobs(cursor)
-	quickAccess = buildQuickAccess(cursor)
-	if terms:
-		language = terms[0]['LangName']
-		cursor.execute("update TargetLanguages set LastUsed=CURRENT_TIMESTAMP where ID=%s limit 1" % languageID)
-		conn.commit()
-		conn.close()
-		return render_template('TermListLanguage.html',
-			language = language,
-			recentLanguages = recentLangs,
-			recentProducts = recentProds,
-			latestJobs = lateJobs,
-			quickAccess = quickAccess,
-			terms = terms,
-			userID = userID,
-			userName = userFirstName + " " + userLastName,
-			STAGING = isStaging)
-	else:
-		cursor.execute("select LangName from TargetLanguages where ID = %s limit 1" % languageID)
-		language = cursor.fetchone()
-		conn.close()
-		return render_template('TermListLanguage.html',
-			language = language['LangName'],
-			recentLanguages = recentLangs,
-			recentProducts = recentProds,
-			latestJobs = lateJobs,
-			quickAccess = quickAccess,
-			userID = userID,
-			userName = userFirstName + " " + userLastName,
-			STAGING = isStaging)
-		
-@app.route('/TermListProduct.html', methods=['GET'])
-def TermListProduct():
-	productID = request.args.get('productID', '')
-	userID = 0
-	userFirstName = ""
-	userLastName = ""
-	
-	if 'UserID' in session:
-		userID = session['UserID']
-		userFirstName = session['UserFirstName']
-		userLastName = session['UserLastName']
-	
-	conn = connectToDB()
-	cursor = conn.cursor(pymysql.cursors.DictCursor)
-	if not productID:
-		productCode = request.args.get('productCode', '')
-		if not productCode:
-			return redirect('ProductList.html')
-		cursor.execute("select ID from Products where ProductCode = '%s' limit 1" % productCode)
-		productID = cursor.fetchone()['ID']
-	
-	cursor.execute("select distinct TermID, IgnoreTerm, Term, TermTranslation, LangCode3Ltr, LangName, ProductCode, ProductName, ContentType, NewTo, DateRequested, DateUpdated, DateTranslated, TranslateUserID, Verified, VerifyUserID, Approved, ApproveUserID, HasArchive, HasComments from TermList where ProductCode = (select ProductCode from Products where ID = %s) order by LangCode2Ltr asc, Term asc" % productID)
-	terms = cursor.fetchall()
-	recentLangs = recentLanguages(cursor)
-	recentProds = recentProducts(cursor)
-	lateJobs = latestJobs(cursor)
-	quickAccess = buildQuickAccess(cursor)
-	if terms:
-		product = terms[0]['ProductName']
-		cursor.execute("update Products set LastUsed=CURRENT_TIMESTAMP where ID=%s limit 1" % productID)
-		conn.commit()
-		conn.close()
-		return render_template('TermListProduct.html',
-			product = product,
-			recentLanguages = recentLangs,
-			recentProducts = recentProds,
-			latestJobs = lateJobs,
-			quickAccess = quickAccess,
-			terms = terms,
-			userID = userID,
-			userName = userFirstName + " " + userLastName,
-			STAGING = isStaging)
-	else:
-		cursor.execute("select ProductName from Products where ID = %s limit 1" % productID)
-		product = cursor.fetchone()
-		conn.close()
-		return render_template('TermListProduct.html',
-			product = product['ProductName'],
-			recentLanguages = recentLangs,
-			recentProducts = recentProds,
-			latestJobs = lateJobs,
-			quickAccess = quickAccess,
-			userID = userID,
-			userName = userFirstName + " " + userLastName,
-			STAGING = isStaging)
-		
-@app.route('/TermListContent.html', methods=['GET'])
-def TermListContent():
-	contentTypeID = request.args.get('contentTypeID', '')
-	userID = 0
-	userFirstName = ""
-	userLastName = ""
-	
-	if 'UserID' in session:
-		userID = session['UserID']
-		userFirstName = session['UserFirstName']
-		userLastName = session['UserLastName']
-	
-	conn = connectToDB()
-	cursor = conn.cursor(pymysql.cursors.DictCursor)
-	contentType = ""
-	if not contentTypeID:
-		contentType = request.args.get('contentType', '')
-		if not contentType:
-			return redirect('ContentList.html')
-		cursor.execute("select ID from ContentTypes where ContentType = '%s' limit 1" % contentType)
-		contentTypeID = cursor.fetchone()['ID']
-	
-	cursor.execute("select distinct TermID, IgnoreTerm, Term, TermTranslation, LangCode3Ltr, LangName, ProductCode, ProductName, ContentType, NewTo, DateRequested, DateUpdated, DateTranslated, TranslateUserID, Verified, VerifyUserID, Approved, ApproveUserID, HasArchive, HasComments from TermList where ContentType = (select ContentType from ContentTypes where ID = %s) or ContentType = 'Both' order by ProductName asc, LangCode2Ltr asc, Term asc" % contentTypeID)
-	terms = cursor.fetchall()
-#	import pprint
-#	pprint.PrettyPrinter(indent=2).pprint(terms)
-	recentLangs = recentLanguages(cursor)
-	recentProds = recentProducts(cursor)
-	lateJobs = latestJobs(cursor)
-	quickAccess = buildQuickAccess(cursor)
-	if not contentType:
-		cursor.execute("select ContentType from ContentTypes where ID = %s limit 1" % contentTypeID)
-		content = cursor.fetchone()
-		contentType = content['ContentType']
-	conn.close()
-	if terms:
-		return render_template('TermListContent.html',
-			contentType = contentType,
-			recentLanguages = recentLangs,
-			recentProducts = recentProds,
-			latestJobs = lateJobs,
-			quickAccess = quickAccess,
-			terms = terms,
-			userID = userID,
-			userName = userFirstName + " " + userLastName,
-			STAGING = isStaging)
-	else:
-		return render_template('TermListContent.html',
-			contentType = contentType,
-			recentLanguages = recentLangs,
-			recentProducts = recentProds,
-			latestJobs = lateJobs,
-			quickAccess = quickAccess,
-			userID = userID,
-			userName = userFirstName + " " + userLastName,
-			STAGING = isStaging)
-			
+					
 @app.route('/terminology.tbx', methods=['GET'])
 def terminology():
 	jobID = 0

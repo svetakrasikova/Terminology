@@ -1,12 +1,12 @@
 {% extends "Base.html" %}
 {% block loginDetails %}{{ super() }}{% endblock loginDetails %}
-{% block currentJob %}{% if terms %}
+{% block currentJob %}{% if total > 0 and jobID %}
 			<li><a href="#" class="sidebarTitle">Current Job</a>
 				<div class="sidebarContent" id="contentCurrent" style="display:none;">
 				<ul>
-					<li><a href="TermListLanguage.html?languageName={{language}}">{{language}}</a></li>
-					<li><a href="TermListProduct.html?productCode={{productCode}}">{{productCode}}</a></li>
-					<li><a href="TermListContent.html?contentType={{contentType}}">{{contentType}}</a></li>
+					<li><a href="TermList.html?langID={{langID}}">{{language}}</a></li>
+					<li><a href="TermList.html?prodID={{prodID}}">{{productName}}</a></li>
+					<!--li><a href="TermListContent.html?contentType={{contentType}}">{{contentType}}</a></li-->
 				</ul>
 				</div>
 			</li>
@@ -63,7 +63,6 @@
 					format: ".[<(qq-) nncnn! (-pp)>].",
 					perpage: {{perPage}},
 					page: {{page}},
-					lapping: 1,
 					onSelect: function (page) {
 						$.ajax({
 							url: 'TermList.html?bare=1{% if langID %}&langID={{langID}}{% endif %}{% if prodID %}&prodID={{prodID}}{% endif %}{% if jobID %}&jobID={{jobID}}{% endif %}{% if searchTerm %}&search={{searchTerm}}{% endif %}&offset='+this.slice[0]+'&perPage=' + $('#pagerSize').val() + '&total={{total}}',
@@ -128,7 +127,7 @@
 						case 'leap':
 							if (this.active)
 								if (this.pos === 1)
-									return "<span class='stats'>{{total}} terms</span><span class='stats'>page " + this.page + " of " + this.pages + "</span>";
+									return "<span class='stats'>{{total}} term{% if total > 1 %}s{% endif %}</span><span class='stats'>page " + this.page + " of " + this.pages + "</span>";
 								else
 									return "<select id='pagerSize' onchange='selectPageSize(parseInt($(\"#pagerSize\").val()))'><option"+(this.perpage === 10 ? " selected='selected'" : "")+">10</option><option"+(this.perpage === 25 ? " selected='selected'" : "")+">25</option><option"+(this.perpage === 50 ? " selected='selected'" : "")+">50</option><option"+(this.perpage === 100 ? " selected='selected'" : "")+">100</option></select><span class='stats'>per page</span>";
 							return "";

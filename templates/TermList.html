@@ -5,11 +5,11 @@
 {% block sidebarProducts %}{{ super() }}{% endblock sidebarProducts %}
 {% block sidebarJobs %}{{ super() }}{% endblock sidebarJobs %}
 {% block contentTypeList %}{{super()}}{% endblock contentTypeList %}
-		{% block contentTitle %}Terminology translation{% if total > 0 %}{% if searchTerm %}{% if productName or language %} for{% if productName and language %}<br/>{% else %} {% endif %}{% if productName %}{{productName}}{% endif %}{% if productName and language %}, {% endif %}{% if language %}{{language}}{% endif %}{% endif %}{% else %} for<br/>{{productName}}, {{language}}{% endif %}{% elif jobString %} for {{jobString}}{% endif %}{% if searchTerm %}<br/>{% if total > 0 %}Showing terms containing{% else %}You searched for{% endif %} <em>{{searchTerm}}</em>{% endif %}{% endblock contentTitle %}
+		{% block contentTitle %}Terminology translation{% if total == 0 and jobString %} for {{jobString}}{% else %}{% if productName or language %} for{% if productName and language %}<br/>{% else %} {% endif %}{% if productName %}{{productName}}{% endif %}{% if productName and language %}, {% endif %}{% if language %}{{language}}{% endif %}{% endif %}{% endif %}{% if searchTerm %}<br/>{% if total > 0 %}Showing terms containing{% else %}You searched for{% endif %} <em>{{searchTerm}}</em>{% endif %}{% endblock contentTitle %}
 		{% if total > 0 %}
-		{% block contentProductColumnHeader %}{% if searchTerm and not productName %}{{ super() }}{% endif %}{% endblock contentProductColumnHeader %}
-		{% block contentLanguageColumnHeader %}{% if searchTerm and not language %}{{ super() }}{% endif %}{% endblock contentLanguageColumnHeader %}
+		{% block contentProductColumnHeader %}{% if not productName %}{{ super() }}{% endif %}{% endblock contentProductColumnHeader %}
+		{% block contentLanguageColumnHeader %}{% if not language %}{{ super() }}{% endif %}{% endblock contentLanguageColumnHeader %}
 		{% block contentContentColumnHeader %}{{ super() }}{% endblock contentContentColumnHeader %}
 		{% else %}
-		{% block contentNoTerms %}{% if searchTerm %}No terms found matching your search query.{% else %}No terms were extracted or the job is still pending.{% endif %}{% endblock contentNoTerms %}
+		{% block contentNoTerms %}{% if searchTerm %}No terms found matching your search query.{% else %}No terms were extracted {% if jobID %}or the job is still pending{% else %}for {% if productName and language %}these{% else %}this{% endif %} {% if productName %}product{% endif %}{% if productName and language %} and {% endif %}{% if language %}language{% endif %}{% endif %}.{% endif %}{% endblock contentNoTerms %}
 		{% endif %}
