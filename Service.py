@@ -668,7 +668,7 @@ def TermList():
 				searchsql = searchsql + " and"
 			sql =  sql + " where" + searchsql + " LangCode3Ltr = (select LangCode3Ltr from TargetLanguages where ID = %s) and ProductCode = (select ProductCode from Products where ID = %s) order by Term asc" % (langID, prodID)
 	if not dataRecords or dataRecords == '0':
-		logger.debug("Counting total terms using following SQL:\n"+"select count(TermID) as Records"+sql)
+# 		logger.debug("Counting total terms using following SQL:\n"+"select count(TermID) as Records"+sql)
 		cursor.execute("select count(TermID) as Records"+sql)
 		recordCount = cursor.fetchone()
 		if recordCount:
@@ -679,7 +679,7 @@ def TermList():
 	if dataRecords > 0:
 		if dataOffset >= dataRecords:
 			dataOffset = 0
-		logger.debug("Selecting terms to display using following SQL:\n"+"select *"+sql+" limit %s offset %s" % (dataPageSize, dataOffset))
+# 		logger.debug("Selecting terms to display using following SQL:\n"+"select *"+sql+" limit %s offset %s" % (dataPageSize, dataOffset))
 		cursor.execute("select *"+sql+" limit %s offset %s" % (dataPageSize, dataOffset))
 		terms = cursor.fetchall()
 	recentLangs = recentLanguages(cursor)
