@@ -50,7 +50,7 @@
 {% block content %}
 		<input type="hidden" name="UserID" value="{{ userID }}"/>
 		<h2>{% block contentTitle %}{% endblock contentTitle %}</h2>
-		{% if terms %}
+		{% if total > 0 %}
 		<div style="margin-right: 200px">
 		<p><strong>Translation instructions</strong></p><p>Translate the full “term string” as it would need to be translated in at least one of the contexts on the right. Don’t skip words that don’t appear to be part of the term. French Example: “lists PObject items” ⇒ “liste les éléments PObject”<br/>The term strings are lowercased, as this is how they are used by the system. The proper case can be seen in the context examples. Skip terms that are obvious typos—we will not enforce translations for terms with typos.</p>
 		</div>
@@ -60,11 +60,25 @@
 			</div>
 			<script>
 				var Paging = $(".pagination").paging({{total}}, {
-					format: ".[<(qq-) nncnn! (-pp)>]",
+					format: ".[<(qq-) nncnn! (-pp)>].",
 					perpage: {{perPage}},
 					page: {{page}},
 					onSelect: function (page) {
-						console.log(this);
+						$.ajax({
+							url: 'TermList.html?langID={{langID}}&prodID={{prodID}}{% if searchTerm %}&search={{searchTerm}}{% endif %}&offset='+this.slice[0]+'&perPage={{perPage}}&total={{total}}&bare=1',
+							type: 'GET',
+							success: function(html) {
+								$($.find('thead')[0].nextElementSibling).html(html);
+								// Re-establish jQuery event handlers
+								$('.toggleClick') .click(toggleMultipart);
+								$('.addCommentButton') .click(addComment);
+								$('.submitCommentButton') .click(submitComment);
+								$('.translateTermToggle') .click(toggleTranslateTerm);
+								$('.cancelTranslationButton') .click(toggleTranslateTerm);
+								$('.saveTranslationButton') .click(saveTranslation);
+								$('.termCheckbox') .click(function(evt) { $(evt.target).find('label').click()} );
+							}
+						});
 						return true;
 					},
 					onFormat: function(type) {
@@ -73,46 +87,49 @@
 							if (!this.active)
 								return '<span class="disabled">' + this.value + '</span>';
 							else if (this.value != this.page)
-								return '<a href="' + window.location.href.substr(0, window.location.href.lastIndexOf('#')) + '#' + this.value + '">' + this.value + '</a>';
+								return '<a href="' + (window.location.href.lastIndexOf('#') > 0 ? window.location.href.substr(0, window.location.href.lastIndexOf('#')) : window.location.href) + (window.location.href.indexOf('total') < 0 ? '&total={{total}}' : '') + '#' + this.value + '">' + this.value + '</a>';
 							return '<span class="current">' + this.value + '</span>';
 				
 						case 'left':
 							if (!this.active)
 								return '<span style="display: none;">' + this.value + '</span>';
 							else if (this.value != this.page)
-								return '<a href="' + window.location.href.substr(0, window.location.href.lastIndexOf('#')) + '#' + this.value + '">' + this.value + '</a>';
+								return '<a href="' + (window.location.href.lastIndexOf('#') > 0 ? window.location.href.substr(0, window.location.href.lastIndexOf('#')) : window.location.href) + (window.location.href.indexOf('total') < 0 ? '&total={{total}}' : '') + '#' + this.value + '">' + this.value + '</a>';
 							return '<span class="current">' + this.value + '</span>';
 				
 						case 'right':
 							if (!this.active)
 								return '<span style="display: none;">' + this.value + '</span>';
 							else if (this.value != this.page)
-								return '<a href="' + window.location.href.substr(0, window.location.href.lastIndexOf('#')) + '#' + this.value + '">' + this.value + '</a>';
+								return '<a href="' + (window.location.href.lastIndexOf('#') > 0 ? window.location.href.substr(0, window.location.href.lastIndexOf('#')) : window.location.href) + (window.location.href.indexOf('total') < 0 ? '&total={{total}}' : '') + '#' + this.value + '">' + this.value + '</a>';
 							return '<span class="current">' + this.value + '</span>';
 				
 						case 'next':
 							if (this.active)
-								return '<a href="' + window.location.href.substr(0, window.location.href.lastIndexOf('#')) + '#' + this.value + '" class="next">></a>';
+								return '<a href="' + (window.location.href.lastIndexOf('#') > 0 ? window.location.href.substr(0, window.location.href.lastIndexOf('#')) : window.location.href) + (window.location.href.indexOf('total') < 0 ? '&total={{total}}' : '') + '#' + this.value + '" class="next">></a>';
 							return '<span class="disabled">></span>';
 				
 						case 'prev':
 							if (this.active)
-								return '<a href="' + window.location.href.substr(0, window.location.href.lastIndexOf('#')) + '#' + this.value + '" class="prev"><</a>';
+								return '<a href="' + (window.location.href.lastIndexOf('#') > 0 ? window.location.href.substr(0, window.location.href.lastIndexOf('#')) : window.location.href) + (window.location.href.indexOf('total') < 0 ? '&total={{total}}' : '') + '#' + this.value + '" class="prev"><</a>';
 							return '<span class="disabled"><</span>';
 				
 						case 'first':
 							if (this.active)
-								return '<a href="' + window.location.href.substr(0, window.location.href.lastIndexOf('#')) + '#' + this.value + '" class="first"><<</a>';
+								return '<a href="' + (window.location.href.lastIndexOf('#') > 0 ? window.location.href.substr(0, window.location.href.lastIndexOf('#')) : window.location.href) + (window.location.href.indexOf('total') < 0 ? '&total={{total}}' : '') + '#' + this.value + '" class="first"><<</a>';
 							return '<span class="disabled"><<</span>';
 				
 						case 'last':
 							if (this.active)
-								return '<a href="' + window.location.href.substr(0, window.location.href.lastIndexOf('#')) + '#' + this.value + '" class="last">>></a>';
+								return '<a href="' + (window.location.href.lastIndexOf('#') > 0 ? window.location.href.substr(0, window.location.href.lastIndexOf('#')) : window.location.href) + (window.location.href.indexOf('total') < 0 ? '&total={{total}}' : '') + '#' + this.value + '" class="last">>></a>';
 							return '<span class="disabled">>></span>';
 				
 						case 'leap':
 							if (this.active)
-								return "<span class='stats'>{{total}} terms</span><span class='stats'>page " + this.page + " of " + this.pages + "</span>";
+								if (this.pos === 1)
+									return "<span class='stats'>{{total}} terms</span><span class='stats'>page " + this.page + " of " + this.pages + "</span>";
+								else
+									return "<select id='pagerSize'><option selected='selected'>10</option><option>25</option><option>50</option><option>100</option></select><span class='stats'>per page</span>";
 							return "";
 				
 						case 'fill':
@@ -122,6 +139,14 @@
 						}
 					}
 				});
+				
+				$('#pagerSize').change(function() {
+					
+				});
+				
+				if (window.location.href.indexOf('total') < 0)
+					window.location.href = ((window.location.href.lastIndexOf('#') > 0 ? window.location.href.substr(0, window.location.href.lastIndexOf('#')) : window.location.href) + (window.location.href.indexOf('total') < 0 ? '&total={{total}}' : ''));
+				
 				$(window).hashchange(function() {
 				
 					if (window.location.hash)
@@ -166,6 +191,7 @@
 					</tr>
 			</thead>
 			<tbody>
+				{% autoescape false %}{{table}}{% endautoescape %}
 			</tbody>
 			</table>
 			<script src="static/jail.js"></script>
