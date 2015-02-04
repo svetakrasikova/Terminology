@@ -10,9 +10,6 @@
 		{% block contentProductColumnHeader %}{% if searchTerm and not productName %}{{ super() }}{% endif %}{% endblock contentProductColumnHeader %}
 		{% block contentLanguageColumnHeader %}{% if searchTerm and not language %}{{ super() }}{% endif %}{% endblock contentLanguageColumnHeader %}
 		{% block contentContentColumnHeader %}{{ super() }}{% endblock contentContentColumnHeader %}
-		{% block contentProductColumnData %}{% if searchTerm and not productName %}{{ super() }}{% endif %}{% endblock contentProductColumnData %}
-		{% block contentLanguageColumnData %}{% if searchTerm and not language %}{{ super() }}{% endif %}{% endblock contentLanguageColumnData %}
-		{% block contentContentColumnData %}{{ super() }}{% endblock contentContentColumnData %}
 		{% else %}
 		{% block contentNoTerms %}{% if searchTerm %}No terms found matching your search query.{% else %}No terms were extracted or the job is still pending.{% endif %}{% endblock contentNoTerms %}
 		{% endif %}
