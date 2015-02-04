@@ -71,7 +71,7 @@ li {margin:0 0 5px 0; padding:0 0 0 5px;}
 .blue a, .blue ul.sidemenu li a, .blue ul.sidemenu li a.active {color:#007272;}
 
 /* Table styling */
-div .tabularContent {overflow-y:auto;}
+div .tabularContent {overflow-y:visible;}
 
 .viewTable {width: 1000px;}
 .viewTable {border-collapse: collapse; border: 1px solid #808080;}
