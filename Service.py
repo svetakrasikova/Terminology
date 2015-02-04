@@ -624,6 +624,8 @@ def TermList():
 		userLastName = session['UserLastName']
 	
 	contentColumnCount = 11
+	showProductColumn = False
+	showLanguageColumn = False
 	conn = connectToDB()
 	cursor = conn.cursor(pymysql.cursors.DictCursor)
 	sql = ""
@@ -638,22 +640,26 @@ def TermList():
 			if not langID or langID == '0':
 				if not prodID or prodID == '0':
 					contentColumnCount = contentColumnCount + 3
+					showProductColumn = True
+					showLanguageColumn = True
 					sql = " from TermList where Term rlike '(^| )%s.*' order by LangCode3Ltr asc, Term asc, ProductName asc" % conn.escape_string(search)
 				else:
 					contentColumnCount = contentColumnCount + 2
+					showLanguageColumn = True
 					sql = " from TermList where Term rlike '(^| )%s.*' and ProductCode = (select ProductCode from Products where ID = %s) order by LangCode3Ltr asc, Term asc" % (conn.escape_string(search), prodID)
 			elif not prodID or prodID == '0':
 				contentColumnCount = contentColumnCount + 2
+				showProductColumn = True
 				sql = " from TermList where Term rlike '(^| )%s.*' and LangCode3Ltr = (select LangCode3Ltr from TargetLanguages where ID = %s) order by Term asc, ProductName asc" % (conn.escape_string(search), langID)
 			else:
 				contentColumnCount = contentColumnCount + 1
 				sql = " from TermList where Term rlike '(^| )%s.*' and LangCode3Ltr = (select LangCode3Ltr from TargetLanguages where ID = %s) and ProductCode = (select ProductCode from Products where ID = %s) order by Term asc" % (conn.escape_string(search), langID, prodID)
 	if not dataRecords or dataRecords == '0':
- 		logger.debug("Counting total terms using following SQL:\n"+"select count(TermID) as Records"+sql)
+#  		logger.debug("Counting total terms using following SQL:\n"+"select count(TermID) as Records"+sql)
 		cursor.execute("select count(TermID) as Records"+sql)
 		recordCount = cursor.fetchone()
 		dataRecords = recordCount['Records']
- 	logger.debug("Selecting terms to display using following SQL:\n"+"select *"+sql+" limit %s offset %s" % (dataPageSize, dataOffset))
+#  	logger.debug("Selecting terms to display using following SQL:\n"+"select *"+sql+" limit %s offset %s" % (dataPageSize, dataOffset))
 	cursor.execute("select *"+sql+" limit %s offset %s" % (dataPageSize, dataOffset))
 	terms = cursor.fetchall()
 	recentLangs = recentLanguages(cursor)
@@ -680,7 +686,7 @@ def TermList():
 			if result:
 				productName = result['ProductName']
 	if terms:
-		logger.debug("We have terms to show!")
+# 		logger.debug("We have terms to show!")
 		cursor.execute("update TargetLanguages set LastUsed=CURRENT_TIMESTAMP where LangCode3Ltr='%s' limit 1" % terms[0]['LangCode3Ltr'])
 		cursor.execute("update Products set LastUsed=CURRENT_TIMESTAMP where ProductCode='%s' limit 1" % terms[0]['ProductCode'])
 		conn.commit()
@@ -694,7 +700,7 @@ def TermList():
 			return render_template('TermList.html',
 				contentColumnCount = contentColumnCount,
 				perPage = dataPageSize,
-				page = (dataOffset / dataPageSize + 1),
+				page = (int(dataOffset) / int(dataPageSize) + 1),
 				total = dataRecords,
 				jobID = jobID,
 				langID = langID,
@@ -708,25 +714,21 @@ def TermList():
 				recentProducts = recentProds,
 				latestJobs = lateJobs,
 				quickAccess = quickAccess,
-				table = render_template('TermListTable.html',
-					terms = terms,
-					contentColumnCount = contentColumnCount
-				),
 				userID = userID,
 				userName = userFirstName + " " + userLastName,
 				STAGING = isStaging)
 		else:
 			return render_template('TermListTable.html',
 				terms = terms,
-				contentColumnCount = contentColumnCount)
+				contentColumnCount = contentColumnCount,
+				showProductColumn = showProductColumn,
+				showLanguageColumn = showLanguageColumn
+				)
 	elif jobID:
 		cursor.execute("select concat('job ', concat_ws(', ', ProductCode, LangCode3Ltr, ContentType)) as JobString from JobList where JobID = %s limit 1" % jobID)
 		jobString = cursor.fetchone()
 		conn.close()
 		return render_template('TermList.html',
-			perPage = dataPageSize,
-			page = (dataOffset / dataPageSize + 1),
-			total = dataRecords,
 			jobString = jobString['JobString'],
 			language = language,
 			productName = productName,
@@ -746,9 +748,6 @@ def TermList():
 			jobStringTxt = jobString['JobString']
 		conn.close()
 		return render_template('TermList.html',
-			perPage = dataPageSize,
-			page = (dataOffset / dataPageSize + 1),
-			total = dataRecords,
 			jobString = jobStringTxt,
 			searchTerm = search,
 			language = language,
