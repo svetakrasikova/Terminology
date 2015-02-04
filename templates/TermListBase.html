@@ -65,7 +65,7 @@
 					page: {{page}},
 					onSelect: function (page) {
 						$.ajax({
-							url: 'TermList.html?langID={{langID}}&prodID={{prodID}}{% if searchTerm %}&search={{searchTerm}}{% endif %}&offset='+this.slice[0]+'&perPage={{perPage}}&total={{total}}&bare=1',
+							url: 'TermList.html?langID={{langID}}&prodID={{prodID}}{% if searchTerm %}&search={{searchTerm}}{% endif %}&offset='+this.slice[0]+'&perPage=' + $('#pagerSize').val() + '&total={{total}}&bare=1',
 							type: 'GET',
 							success: function(html) {
 								$($.find('thead')[0].nextElementSibling).html(html);
@@ -141,7 +141,24 @@
 				});
 				
 				$('#pagerSize').change(function() {
+					Paging.a.perpage = $('#pagerSize').val();
+					Paging.setPage();
 					
+						$.ajax({
+							url: 'TermList.html?langID={{langID}}&prodID={{prodID}}{% if searchTerm %}&search={{searchTerm}}{% endif %}&offset='+(Paging.a.perpage * Paging.a.page)+'&perPage={{perPage}}&total={{total}}&bare=1',
+							type: 'GET',
+							success: function(html) {
+								$($.find('thead')[0].nextElementSibling).html(html);
+								// Re-establish jQuery event handlers
+								$('.toggleClick') .click(toggleMultipart);
+								$('.addCommentButton') .click(addComment);
+								$('.submitCommentButton') .click(submitComment);
+								$('.translateTermToggle') .click(toggleTranslateTerm);
+								$('.cancelTranslationButton') .click(toggleTranslateTerm);
+								$('.saveTranslationButton') .click(saveTranslation);
+								$('.termCheckbox') .click(function(evt) { $(evt.target).find('label').click()} );
+							}
+						});
 				});
 				
 				if (window.location.href.indexOf('total') < 0)
