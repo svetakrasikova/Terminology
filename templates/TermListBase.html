@@ -129,7 +129,7 @@
 								if (this.pos === 1)
 									return "<span class='stats'>{{total}} term{% if total > 1 %}s{% endif %}</span><span class='stats'>page " + this.page + " of " + this.pages + "</span>";
 								else
-									return "<select id='pagerSize' onchange='selectPageSize(parseInt($(\"#pagerSize\").val()))'><option"+(this.perpage === 10 ? " selected='selected'" : "")+">10</option><option"+(this.perpage === 25 ? " selected='selected'" : "")+">25</option><option"+(this.perpage === 50 ? " selected='selected'" : "")+">50</option><option"+(this.perpage === 100 ? " selected='selected'" : "")+">100</option></select><span class='stats'>per page</span>";
+									return "<select id='pagerSize' onchange='selectPageSize(parseInt($(\"#pagerSize\").val()),"+this.slice[0]+")'><option"+(this.perpage === 10 ? " selected='selected'" : "")+">10</option><option"+(this.perpage === 25 ? " selected='selected'" : "")+">25</option><option"+(this.perpage === 50 ? " selected='selected'" : "")+">50</option><option"+(this.perpage === 100 ? " selected='selected'" : "")+">100</option></select><span class='stats'>per page</span>";
 							return "";
 				
 						case 'fill':
@@ -140,12 +140,13 @@
 					}
 				});
 				
-				function selectPageSize(perpage) {
+				function selectPageSize(perpage, offset) {
 					Paging.a.perpage = perpage;
-					Paging.setPage();
+					var page = (offset - offset%perpage)/perpage + 1;
+					Paging.setPage(page);
 					
 						$.ajax({
-							url: 'TermList.html?bare=1{% if langID %}&langID={{langID}}{% endif %}{% if prodID %}&prodID={{prodID}}{% endif %}{% if jobID %}&jobID={{jobID}}{% endif %}{% if searchTerm %}&search={{searchTerm}}{% endif %}&offset='+(Paging.a.perpage * Paging.a.page)+'&perPage='+perpage+'&total={{total}}',
+							url: 'TermList.html?bare=1{% if langID %}&langID={{langID}}{% endif %}{% if prodID %}&prodID={{prodID}}{% endif %}{% if jobID %}&jobID={{jobID}}{% endif %}{% if searchTerm %}&search={{searchTerm}}{% endif %}&offset='+(perpage * (page - 1))+'&perPage='+perpage+'&total={{total}}',
 							type: 'GET',
 							success: function(html) {
 								$('.viewTable >tbody').html(html);
@@ -161,7 +162,7 @@
 						});
 				}
 				
-				$('#pagerSize').change(selectPageSize({{perPage}}));
+				$('#pagerSize').change(selectPageSize({{perPage}}), 0);
 				
 				if (window.location.href.indexOf('total') < 0)
 					window.location.href = ((window.location.href.lastIndexOf('#') > 0 ? window.location.href.substr(0, window.location.href.lastIndexOf('#')) : window.location.href) + (window.location.href.indexOf('total') < 0 ? '&total={{total}}' : ''));
