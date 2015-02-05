@@ -921,7 +921,7 @@ def JobList():
 	else:
 		sql = " from JobList where LangCode3Ltr = (select LangCode3Ltr from TargetLanguages where TargetLanguages.ID = %s limit 1) and ProductCode = (select ProductCode from Products where Products.ID = %s limit 1)" % (langID, prodID)
 	if not dataRecords or dataRecords == '0':
-		logger.debug("Counting total jobs using following SQL:\n"+"select count(TermID) as Records"+sql)
+# 		logger.debug("Counting total jobs using following SQL:\n"+"select count(TermID) as Records"+sql)
 		cursor.execute("select count(JobID) as Records"+sql)
 		recordCount = cursor.fetchone()
 		if recordCount:
@@ -932,7 +932,7 @@ def JobList():
 	if dataRecords > 0:
 		if dataOffset >= dataRecords:
 			dataOffset = 0
-		logger.debug("Selecting jobs to display using following SQL:\n"+"select *"+sql+" limit %s offset %s" % (dataPageSize, dataOffset))
+# 		logger.debug("Selecting jobs to display using following SQL:\n"+"select *"+sql+" limit %s offset %s" % (dataPageSize, dataOffset))
 		cursor.execute("select *"+sql+" limit %s offset %s" % (dataPageSize, dataOffset))
 		jobs = cursor.fetchall()
 
@@ -969,8 +969,7 @@ def JobList():
 			STAGING = isStaging)
 	else:
 		return render_template('JobListTable.html',
-			jobs = jobs,
-			)
+			jobs = jobs)
 
 @app.route('/LanguageList.html', methods=['GET'])
 def LanguageList():
