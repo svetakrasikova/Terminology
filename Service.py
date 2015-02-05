@@ -9,7 +9,7 @@
 # !!! Subsequent changes tracked on GitHub only !!!
 #
 # v3.4		Modified on 30 Jan 2015 by Samuel Läubli
-# Term translations are not pushed to Solr/NeXLT as soon as they are approved. Translations from the Term Translation
+# Term translations are now pushed to Solr/NeXLT as soon as they are approved. Translations from the Term Translation
 # Central are indexed with the "resource"="Terminology" attribute in Solr.
 #
 # v3.3.1	Modified on 28 Jan 2015 by Ventsislav Zhechev
