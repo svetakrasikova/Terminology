@@ -882,6 +882,20 @@ def terminology():
 		
 @app.route('/JobList.html', methods=['GET'])
 def JobList():
+	try:
+		dataOffset = int(request.args.get('offset', 0))
+	except:
+		dataOffset = 0
+	try:
+		dataPageSize = int(request.args.get('perPage', 10))
+	except:
+		dataPageSize = 10
+	try:
+		dataRecords = int(request.args.get('total', 0))
+	except:
+		dataRecords = 0
+	dataOnly = request.args.get('bare', 0)
+
 	langID = request.args.get('langID', '')
 	prodID = request.args.get('prodID', '')
 
@@ -896,16 +910,32 @@ def JobList():
 	
 	conn = connectToDB()
 	cursor = conn.cursor(pymysql.cursors.DictCursor)
+	sql = ""
 	if not langID or langID == '0':
 		if not prodID or prodID == '0':
-			cursor.execute("select * from JobList")
+			sql = " from JobList"
 		else:
-			cursor.execute("select * from JobList where ProductCode = (select ProductCode from Products where Products.ID = %s limit 1)" % prodID)
+			sql = " from JobList where ProductCode = (select ProductCode from Products where Products.ID = %s limit 1)" % prodID
 	elif not prodID or prodID == '0':
-		cursor.execute("select * from JobList where LangCode3Ltr = (select LangCode3Ltr from TargetLanguages where TargetLanguages.ID = %s limit 1)" % langID)
+		sql = " from JobList where LangCode3Ltr = (select LangCode3Ltr from TargetLanguages where TargetLanguages.ID = %s limit 1)" % langID
 	else:
-		cursor.execute("select * from JobList where LangCode3Ltr = (select LangCode3Ltr from TargetLanguages where TargetLanguages.ID = %s limit 1) and ProductCode = (select ProductCode from Products where Products.ID = %s limit 1)" % (langID, prodID))
-	jobs = cursor.fetchall()
+		sql = " from JobList where LangCode3Ltr = (select LangCode3Ltr from TargetLanguages where TargetLanguages.ID = %s limit 1) and ProductCode = (select ProductCode from Products where Products.ID = %s limit 1)" % (langID, prodID)
+	if not dataRecords or dataRecords == '0':
+		logger.debug("Counting total jobs using following SQL:\n"+"select count(TermID) as Records"+sql)
+		cursor.execute("select count(JobID) as Records"+sql)
+		recordCount = cursor.fetchone()
+		if recordCount:
+			dataRecords = recordCount['Records']
+		else:
+			dataRecords = 0
+	jobs = None
+	if dataRecords > 0:
+		if dataOffset >= dataRecords:
+			dataOffset = 0
+		logger.debug("Selecting jobs to display using following SQL:\n"+"select *"+sql+" limit %s offset %s" % (dataPageSize, dataOffset))
+		cursor.execute("select *"+sql+" limit %s offset %s" % (dataPageSize, dataOffset))
+		jobs = cursor.fetchall()
+
 	language = None
 	if langID and langID != '0':
 		cursor.execute("select LangName from TargetLanguages where ID = %s" % langID)
@@ -922,16 +952,25 @@ def JobList():
 	recentProds = recentProducts(cursor)
 	quickAccess = buildQuickAccess(cursor)
 	conn.close()
-	return render_template('JobList.html',
-		recentLanguages = recentLangs,
-		recentProducts = recentProds,
-		quickAccess = quickAccess,
-		language = language,
-		product = product,
-		jobs = jobs,
-		userID = userID,
-		userName = userFirstName + " " + userLastName,
-		STAGING = isStaging)
+	if not dataOnly or dataOnly == '0':
+		return render_template('JobList.html',
+			perPage = dataPageSize,
+			page = (int(dataOffset) / int(dataPageSize) + 1),
+			total = dataRecords,
+			langID = langID,
+			prodID = prodID,
+			recentLanguages = recentLangs,
+			recentProducts = recentProds,
+			quickAccess = quickAccess,
+			language = language,
+			product = product,
+			userID = userID,
+			userName = userFirstName + " " + userLastName,
+			STAGING = isStaging)
+	else:
+		return render_template('JobListTable.html',
+			jobs = jobs,
+			)
 
 @app.route('/LanguageList.html', methods=['GET'])
 def LanguageList():

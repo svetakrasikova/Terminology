@@ -1,0 +1,13 @@
+			{% for job in jobs %}
+				<tr class="{{ loop.cycle('oddRow', 'evenRow') }} trHover clickRow" onclick="window.open('TermList.html?jobID={{ job['JobID'] }}', '_self');">
+					<td scope="row" align="center" class="{% if job['Pending'] == '\x00' %}greenCell{% else %}redCell{% endif %}">{% if job['Pending'] == '\x01' %}yes{% else %}no{% endif %}</td>
+					<td scope="row" align="center" class="{% if job['Completed'] == 1 %}greenCell{% else %}redCell{% endif %}">{% if job['Completed'] == 1 %}yes{% else %}no{% endif %}</td>
+					<td scope="row" align="center">{{ job['ProductCode'] }}</td>
+					<td scope="row">{{ job['ProductName'] }}</td>
+					<td scope="row" align="center">{{ job['LangName'] }}</td>
+					<td scope="row" align="center">{{ job['ContentType'] }}</td>
+					<td scope="row" align="center">{{ job['DatePosted'] }}</td>
+					<td scope="row" align="center">{% if job['DateProcessed'] %}{{ job['DateProcessed'] }}{% else %}processing…{% endif %}</td>
+					<td scope="row" align="center" class="{% if job['Completed'] == 1 %}greenCell{% else %}redCell{% endif %}">{{ job['TermsPending'] }}</td>
+				</tr>
+			{% endfor %}

@@ -7,9 +7,116 @@
 {% block contentTypeList %}{{ super() }}{% endblock contentTypeList %}
 {% block content %}
 		<h2>Term extraction jobs{% if language or product %} for {% endif %}{% if product %}{{ product }}{% endif %}{% if language and product %}, {% endif %}{% if language %}{{ language }}{% endif %}</h2>
-		{% if jobs %}
+		{% if total > 0 %}
 		<p>Jobs, for which term extraction is still carried out in the background, are marked as ‘Pending’.<br/>Jobs, for which all translations have received final approval, are marked as ‘Completed’.</p>
-		<div class="tabularContent"><table class="viewTable">
+		<div class="tabularContent">
+			<div class="pagination">
+				
+			</div>
+			<script>
+				var Paging = $(".pagination").paging({{total}}, {
+					format: ".[<(qq-) nncnn! (-pp)>].",
+					perpage: {{perPage}},
+					page: {{page}},
+					onSelect: function (page) {
+						$.ajax({
+							url: 'JobList.html?bare=1{% if langID %}&langID={{langID}}{% endif %}{% if prodID %}&prodID={{prodID}}{% endif %}&offset='+this.slice[0]+'&perPage=' + $('#pagerSize').val() + '&total={{total}}',
+							type: 'GET',
+							success: function(html) {
+								$('.viewTable >tbody').html(html);
+							}
+						});
+						return true;
+					},
+					onFormat: function(type) {
+						switch (type) {
+						case 'block':
+							if (!this.active)
+								return '<span class="disabled">' + this.value + '</span>';
+							else if (this.value != this.page)
+								return '<a href="' + (window.location.href.lastIndexOf('#') > 0 ? window.location.href.substr(0, window.location.href.lastIndexOf('#')) : window.location.href) + (window.location.href.indexOf('total') < 0 ? '&total={{total}}' : '') + '#' + this.perpage + '@'+ this.value + '">' + this.value + '</a>';
+							return '<span class="current">' + this.value + '</span>';
+				
+						case 'left':
+							if (!this.active)
+								return '<span style="display: none;">' + this.value + '</span>';
+							else if (this.value != this.page)
+								return '<a href="' + (window.location.href.lastIndexOf('#') > 0 ? window.location.href.substr(0, window.location.href.lastIndexOf('#')) : window.location.href) + (window.location.href.indexOf('total') < 0 ? '&total={{total}}' : '') + '#' + this.perpage + '@'+ this.value + '">' + this.value + '</a>';
+							return '<span class="current">' + this.value + '</span>';
+				
+						case 'right':
+							if (!this.active)
+								return '<span style="display: none;">' + this.value + '</span>';
+							else if (this.value != this.page)
+								return '<a href="' + (window.location.href.lastIndexOf('#') > 0 ? window.location.href.substr(0, window.location.href.lastIndexOf('#')) : window.location.href) + (window.location.href.indexOf('total') < 0 ? '&total={{total}}' : '') + '#' + this.perpage + '@'+ this.value + '">' + this.value + '</a>';
+							return '<span class="current">' + this.value + '</span>';
+				
+						case 'next':
+							if (this.active)
+								return '<a href="' + (window.location.href.lastIndexOf('#') > 0 ? window.location.href.substr(0, window.location.href.lastIndexOf('#')) : window.location.href) + (window.location.href.indexOf('total') < 0 ? '&total={{total}}' : '') + '#' + this.perpage + '@'+ this.value + '" class="next">></a>';
+							return '<span class="disabled">></span>';
+				
+						case 'prev':
+							if (this.active)
+								return '<a href="' + (window.location.href.lastIndexOf('#') > 0 ? window.location.href.substr(0, window.location.href.lastIndexOf('#')) : window.location.href) + (window.location.href.indexOf('total') < 0 ? '&total={{total}}' : '') + '#' + this.perpage + '@'+ this.value + '" class="prev"><</a>';
+							return '<span class="disabled"><</span>';
+				
+						case 'first':
+							if (this.active)
+								return '<a href="' + (window.location.href.lastIndexOf('#') > 0 ? window.location.href.substr(0, window.location.href.lastIndexOf('#')) : window.location.href) + (window.location.href.indexOf('total') < 0 ? '&total={{total}}' : '') + '#' + this.perpage + '@'+ this.value + '" class="first"><<</a>';
+							return '<span class="disabled"><<</span>';
+				
+						case 'last':
+							if (this.active)
+								return '<a href="' + (window.location.href.lastIndexOf('#') > 0 ? window.location.href.substr(0, window.location.href.lastIndexOf('#')) : window.location.href) + (window.location.href.indexOf('total') < 0 ? '&total={{total}}' : '') + '#' + this.perpage + '@' + this.value + '" class="last">>></a>';
+							return '<span class="disabled">>></span>';
+				
+						case 'leap':
+							if (this.active)
+								if (this.pos === 1)
+									return "<span class='stats'>{{total}} job{% if total > 1 %}s{% endif %}</span><span class='stats'>page " + this.page + " of " + this.pages + "</span>";
+								else
+									return "<select id='pagerSize' onchange='selectPageSize(parseInt($(\"#pagerSize\").val()),"+this.slice[0]+")'><option"+(this.perpage === 10 ? " selected='selected'" : "")+">10</option><option"+(this.perpage === 25 ? " selected='selected'" : "")+">25</option><option"+(this.perpage === 50 ? " selected='selected'" : "")+">50</option><option"+(this.perpage === 100 ? " selected='selected'" : "")+">100</option></select><span class='stats'>per page</span>";
+							return "";
+				
+						case 'fill':
+							if (this.active)
+								return "<span class='ellipsis'>…</span>";
+							return "";
+						}
+					}
+				});
+				
+				function selectPageSize(perpage, offset) {
+					Paging.a.perpage = perpage;
+					var page = (offset - offset%perpage)/perpage + 1;
+					Paging.setPage(page);
+					
+						$.ajax({
+							url: 'JobList.html?bare=1{% if langID %}&langID={{langID}}{% endif %}{% if prodID %}&prodID={{prodID}}{% endif %}&offset='+(Paging.a.perpage * (page - 1))+'&perPage='+perpage+'&total={{total}}',
+							type: 'GET',
+							success: function(html) {
+								$('.viewTable >tbody').html(html);
+							}
+						});
+				}
+				
+				$('#pagerSize').change(selectPageSize({{perPage}}));
+				
+				if (window.location.href.indexOf('total') < 0)
+					window.location.href = ((window.location.href.lastIndexOf('#') > 0 ? window.location.href.substr(0, window.location.href.lastIndexOf('#')) : window.location.href) + (window.location.href.indexOf('total') < 0 ? '&total={{total}}' : ''));
+				
+				$(window).hashchange(function() {
+				
+					if (window.location.hash)
+						Paging.setPage(window.location.hash.substr(window.location.hash.lastIndexOf('@')+1));
+					else
+						Paging.setPage(1); // we dropped the initial page selection and need to run it manually
+				});
+				
+				$(window).hashchange();
+			</script>
+			<table class="viewTable">
 			<thead>
 				<tr>
 					<th nowrap scope="col">Pending</th>
@@ -23,19 +130,8 @@
 						<th nowrap scope="col">Terms<br/>Pending</th>
 					</tr>
 			</thead>
-			{% for job in jobs %}
-				<tr class="{{ loop.cycle('oddRow', 'evenRow') }} trHover clickRow" onclick="window.open('TermList.html?jobID={{ job['JobID'] }}', '_self');">
-					<td scope="row" align="center" class="{% if job['Pending'] == '\x00' %}greenCell{% else %}redCell{% endif %}">{% if job['Pending'] == '\x01' %}yes{% else %}no{% endif %}</td>
-					<td scope="row" align="center" class="{% if job['Completed'] == 1 %}greenCell{% else %}redCell{% endif %}">{% if job['Completed'] == 1 %}yes{% else %}no{% endif %}</td>
-					<td scope="row" align="center">{{ job['ProductCode'] }}</td>
-					<td scope="row">{{ job['ProductName'] }}</td>
-					<td scope="row" align="center">{{ job['LangName'] }}</td>
-					<td scope="row" align="center">{{ job['ContentType'] }}</td>
-					<td scope="row" align="center">{{ job['DatePosted'] }}</td>
-					<td scope="row" align="center">{% if job['DateProcessed'] %}{{ job['DateProcessed'] }}{% else %}processing…{% endif %}</td>
-					<td scope="row" align="center" class="{% if job['Completed'] == 1 %}greenCell{% else %}redCell{% endif %}">{{ job['TermsPending'] }}</td>
-				</tr>
-			{% endfor %}
+			<tbody>
+			</tbody>
 			</table></div>
 		{% else %}
 		<p>No jobs available in the system at present.</p>
