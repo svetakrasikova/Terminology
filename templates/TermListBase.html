@@ -162,7 +162,7 @@
 						});
 				}
 				
-				$('#pagerSize').change(selectPageSize({{perPage}}), 0);
+				$('#pagerSize').change(selectPageSize({{perPage}}, 0));
 				
 				if (window.location.href.indexOf('total') < 0)
 					window.location.href = ((window.location.href.lastIndexOf('#') > 0 ? window.location.href.substr(0, window.location.href.lastIndexOf('#')) : window.location.href) + (window.location.href.indexOf('total') < 0 ? '&total={{total}}' : ''));
@@ -211,7 +211,6 @@
 					</tr>
 			</thead>
 			<tbody>
-				{% autoescape false %}{{table}}{% endautoescape %}
 			</tbody>
 			</table>
 			<script src="static/jail.js"></script>
