@@ -18,7 +18,7 @@
 					</tr>
 			</thead>
 			{% for product in products %}
-				<tr class="{{ loop.cycle('oddRow', 'evenRow') }} trHover clickRow" onclick="window.open('TermListProduct.html?productID={{ product['ProductID'] }}', '_self');">
+				<tr class="{{ loop.cycle('oddRow', 'evenRow') }} trHover clickRow" onclick="window.open('TermList.html?prodID={{ product['ProductID'] }}', '_self');">
 					<td scope="row">{{ product['ProductName'] }}</td>
 					<td scope="row" align="center" nowrap>{{ product['ProductCode'] }}</td>
 					<td scope="row" align="center" class="{% if product['JobsPending'] == 0 %}greenCell{% else %}redCell{% endif %}">{{ product['JobsPending'] }}</td>

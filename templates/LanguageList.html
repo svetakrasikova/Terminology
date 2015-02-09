@@ -19,7 +19,7 @@
 					</tr>
 			</thead>
 			{% for language in languages %}
-				<tr class="{{ loop.cycle('oddRow', 'evenRow') }} trHover clickRow" onclick="window.open('TermListLanguage.html?languageID={{ language['LanguageID'] }}', '_self');">
+				<tr class="{{ loop.cycle('oddRow', 'evenRow') }} trHover clickRow" onclick="window.open('TermList.html?langID={{ language['LanguageID'] }}', '_self');">
 					<td scope="row" align="center">{{ language['LangName'] }}</td>
 					<td scope="row" align="center" nowrap>{{ language['LangCode2Ltr'] }}</td>
 					<td scope="row" align="center" nowrap>{{ language['LangCode3Ltr'] }}</td>
