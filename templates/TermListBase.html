@@ -165,7 +165,7 @@
 				$('#pagerSize').change(selectPageSize({{perPage}}, 0));
 				
 				if (window.location.href.indexOf('total') < 0)
-					window.location.href = ((window.location.href.lastIndexOf('#') > 0 ? window.location.href.substr(0, window.location.href.lastIndexOf('#')) : window.location.href) + (window.location.href.indexOf('total') < 0 ? '&total={{total}}' : ''));
+					window.location.href = ((window.location.href.lastIndexOf('#') > 0 ? window.location.href.substr(0, window.location.href.lastIndexOf('#')) : window.location.href) + (window.location.href.indexOf('total') < 0 ? ((window.location.href.indexOf('?') < 0 ? '?' : '&') + 'total={{total}}') : ''));
 				
 				$(window).hashchange(function() {
 				
