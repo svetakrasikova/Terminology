@@ -148,10 +148,15 @@ class termHarvestThread (threading.Thread):
 			))
 		Extractor.loadAuxiliaryData()
 		logger.debug(u"Training POS tagger…".encode('utf-8'))
-		if isStaging:
-			Extractor.trainPOSTagger(1)
-		else:
-			Extractor.trainPOSTagger(0)
+		try:
+			if isStaging:
+				Extractor.trainPOSTagger(0)
+			else:
+				Extractor.trainPOSTagger(0)
+		except Exception, e:
+			logger.debug("Could not train POS tagger!".encode('utf-8'))
+			logger.debug(traceback.format_exc())
+			raise
 		logger.debug("Initialised!".encode('utf-8'))
 	def run(self):
 		global exitFlag

@@ -6,6 +6,8 @@
 # Created in 2012 by Petra Ribiczey
 #
 # Changelog
+# !!! Subsequent changes tracked on GitHub only !!!
+#
 # v3.6.3	Modified on 12 Jan 2015 by Ventsislav Zhechev
 # Fixed a bug where terms, for which a source context could not be found, would still be returned to the client.
 # Modified to remove the complete candidate chunk if one of its words consists of a single character.
@@ -93,7 +95,7 @@ Prerequisites:
 - 
 """
 
-import nltk, codecs, locale, requests, json, re, bz2
+import nltk, codecs, locale, requests, json, re, bz2, cPickle, os.path
 from nltk.tokenize import LineTokenizer, TreebankWordTokenizer
 from nltk.tag import brill, tnt, DefaultTagger
 from nltk.corpus import conll2000, treebank
@@ -173,67 +175,87 @@ def trainPOSTagger(useTnTTagger):
 	global pos_tagger
 	global adskCorpusRoot
 	# Train TNT/Brill POS-tagger using own training data + treebank data from nltk. Tested that using treebank data improves results.
-
-	autodesk = TaggedCorpusReader(adskCorpusRoot, '.*', encoding='utf-8')
-	train_sents =  autodesk.tagged_sents() + treebank.tagged_sents()
-
-	# Use TnT tagger on request
-	if useTnTTagger:
-		if __debug_on__:
-			Service.logger.debug("Using TnT POS tagger...")
-		unk_tagger = DefaultTagger('NN')
-
-		pos_tagger = tnt.TnT(unk=unk_tagger, Trained=True)
-		pos_tagger.train(train_sents)
-	# Use Brill tagger by default
-	else:
-		if __debug_on__:
-			Service.logger.debug("Using Brill POS tagger...")
-
-		def backoff_tagger(tagged_sents, tagger_classes, backoff=None):
-			if not backoff:
-				backoff = tagger_classes[0](tagged_sents)
-				del tagger_classes[0]
- 
-			for cls in tagger_classes:
-				tagger = cls(tagged_sents, backoff=backoff)
-				backoff = tagger
- 
-			return backoff
 	
-		word_patterns = [
-			(r'^-?[0-9]+(.[0-9]+)?$', 'CD'),
-			(r'.*ould$', 'MD'),
-			(r'.*ing$', 'VBG'),
-			(r'.*ed$', 'VBD'),
-			(r'.*ness$', 'NN'),
-			(r'.*ment$', 'NN'),
-			(r'.*ful$', 'JJ'),
-			(r'.*ious$', 'JJ'),
-			(r'.*ble$', 'JJ'),
-			(r'.*ic$', 'JJ'),
-			(r'.*ive$', 'JJ'),
-			(r'.*ic$', 'JJ'),
-			(r'.*est$', 'JJ'),
-			(r'^a$', 'PREP'),
-		]
-		raubt_tagger = backoff_tagger(train_sents, [nltk.tag.AffixTagger, nltk.tag.UnigramTagger, nltk.tag.BigramTagger, nltk.tag.TrigramTagger], backoff=nltk.tag.RegexpTagger(word_patterns))
- 
-		templates = [
-			brill.SymmetricProximateTokensTemplate(brill.ProximateTagsRule, (1,1)),
-			brill.SymmetricProximateTokensTemplate(brill.ProximateTagsRule, (2,2)),
-			brill.SymmetricProximateTokensTemplate(brill.ProximateTagsRule, (1,2)),
-			brill.SymmetricProximateTokensTemplate(brill.ProximateTagsRule, (1,3)),
-			brill.SymmetricProximateTokensTemplate(brill.ProximateWordsRule, (1,1)),
-			brill.SymmetricProximateTokensTemplate(brill.ProximateWordsRule, (2,2)),
-			brill.SymmetricProximateTokensTemplate(brill.ProximateWordsRule, (1,2)),
-			brill.SymmetricProximateTokensTemplate(brill.ProximateWordsRule, (1,3)),
-			brill.ProximateTokensTemplate(brill.ProximateTagsRule, (-1, -1), (1,1)),
-			brill.ProximateTokensTemplate(brill.ProximateWordsRule, (-1, -1), (1,1))
-		]
+	if useTnTTagger:
+		storedModel = "/var/log/Terminology/pos_model_tnt.bin"
+	else:
+		storedModel = "/var/log/Terminology/pos_model_brill.bin"
+
+	if os.path.isfile(storedModel):
+		Service.logger.debug("Loading stored POS tagger model from %s" % storedModel)
+		modelFile = open(storedModel, "rb")
+		try:
+			pos_tagger = cPickle.load(modelFile)
+		except Exception, e:
+			Servide.logger.debug("Exception while loading pickled POS model!")
+			Service.logger.debug(traceback.format_exc())
+		modelFile.close()
+	else:
+		autodesk = TaggedCorpusReader(adskCorpusRoot, '.*', encoding='utf-8')
+		train_sents =  autodesk.tagged_sents() + treebank.tagged_sents()
+	
+		# Use TnT tagger on request
+		if useTnTTagger:
+			if __debug_on__:
+				Service.logger.debug("Using TnT POS tagger...")
+			unk_tagger = DefaultTagger('NN')
+	
+			pos_tagger = tnt.TnT(unk=unk_tagger, Trained=True)
+			pos_tagger.train(train_sents)
+		# Use Brill tagger by default
+		else:
+			if __debug_on__:
+				Service.logger.debug("Using Brill POS tagger...")
+	
+			def backoff_tagger(tagged_sents, tagger_classes, backoff=None):
+				if not backoff:
+					backoff = tagger_classes[0](tagged_sents)
+					del tagger_classes[0]
 	 
-		trainer = brill.FastBrillTaggerTrainer(raubt_tagger, templates)
-		pos_tagger = trainer.train(train_sents, max_rules=200, min_score=3)
+				for cls in tagger_classes:
+					tagger = cls(tagged_sents, backoff=backoff)
+					backoff = tagger
+	 
+				return backoff
+		
+			word_patterns = [
+				(r'^-?[0-9]+(.[0-9]+)?$', 'CD'),
+				(r'.*ould$', 'MD'),
+				(r'.*ing$', 'VBG'),
+				(r'.*ed$', 'VBD'),
+				(r'.*ness$', 'NN'),
+				(r'.*ment$', 'NN'),
+				(r'.*ful$', 'JJ'),
+				(r'.*ious$', 'JJ'),
+				(r'.*ble$', 'JJ'),
+				(r'.*ic$', 'JJ'),
+				(r'.*ive$', 'JJ'),
+				(r'.*ic$', 'JJ'),
+				(r'.*est$', 'JJ'),
+				(r'^a$', 'PREP'),
+			]
+			raubt_tagger = backoff_tagger(train_sents, [nltk.tag.AffixTagger, nltk.tag.UnigramTagger, nltk.tag.BigramTagger, nltk.tag.TrigramTagger], backoff=nltk.tag.RegexpTagger(word_patterns))
+	 
+			templates = [
+				brill.SymmetricProximateTokensTemplate(brill.ProximateTagsRule, (1,1)),
+				brill.SymmetricProximateTokensTemplate(brill.ProximateTagsRule, (2,2)),
+				brill.SymmetricProximateTokensTemplate(brill.ProximateTagsRule, (1,2)),
+				brill.SymmetricProximateTokensTemplate(brill.ProximateTagsRule, (1,3)),
+				brill.SymmetricProximateTokensTemplate(brill.ProximateWordsRule, (1,1)),
+				brill.SymmetricProximateTokensTemplate(brill.ProximateWordsRule, (2,2)),
+				brill.SymmetricProximateTokensTemplate(brill.ProximateWordsRule, (1,2)),
+				brill.SymmetricProximateTokensTemplate(brill.ProximateWordsRule, (1,3)),
+				brill.ProximateTokensTemplate(brill.ProximateTagsRule, (-1, -1), (1,1)),
+				brill.ProximateTokensTemplate(brill.ProximateWordsRule, (-1, -1), (1,1))
+			]
+		 
+			trainer = brill.FastBrillTaggerTrainer(raubt_tagger, templates)
+			pos_tagger = trainer.train(train_sents, max_rules=200, min_score=3)
+			
+		Service.logger.debug("Storing POS tagger model to %s" % storedModel)
+		modelFile = open(storedModel, "wb")
+		cPickle.dump(pos_tagger, modelFile, -1)
+		modelFile.close()
 
 
 # Define harvesting process
