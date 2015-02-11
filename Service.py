@@ -166,7 +166,12 @@ class termHarvestThread (threading.Thread):
 				jobID, contentID, products, language, data = jobQueue.get(True, 60)
 				logger.debug((u"Processing a job…\nContentID: " + str(contentID) + "; ProductID: " + str(products[0]) + "; LanguageID: " + str(language[0])).encode('utf-8'))
 				#process job
-				terms = Extractor.Getterms(data, language[1], products[1], 0)
+				try:
+					terms = Extractor.Getterms(data, language[1], products[1], 0)
+				except Exception, e:
+					logger.debug("Could not extract terms!".encode('utf-8'))
+					logger.debug(traceback.format_exc())
+					raise
 				
 				#Machine translation of source contexts
 				logger.debug("Processing source contexts through MT")
