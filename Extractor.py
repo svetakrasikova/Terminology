@@ -112,11 +112,10 @@ import Service
 # Module-level variables
 pos_tagger = None
 word_tok = sent_tokenizer = None
-ngrams = {}
 nowords = None
 __debug_on__ = False
 
-adskCorpusRoot = adskUnwordsRoot = ngramFilePath = None
+adskCorpusRoot = adskUnwordsRoot = None
 
 
 def init(settings):
@@ -125,12 +124,10 @@ def init(settings):
 		settings = dict(
 			adskCorpusRoot="/Volumes/OptiBay/ADSK_Software/termExtraction/auxiliaryData/taggerCorpus",
 			adskUnwordsRoot="/Volumes/OptiBay/ADSK_Software/termExtraction/auxiliaryData/unwords",
-			ngramFilePath="/Volumes/OptiBay/ADSK_Software/termExtraction/auxiliaryData/enu.ngrams.nocounts",
 			)
-	global adskCorpusRoot, adskUnwordsRoot, ngramFilePath
+	global adskCorpusRoot, adskUnwordsRoot
 	adskCorpusRoot = settings["adskCorpusRoot"]
 	adskUnwordsRoot = settings["adskUnwordsRoot"]
-	ngramFilePath = settings["ngramFilePath"]
 	
 
 # Define tokenizers (these could be changed if needed.)
@@ -148,22 +145,10 @@ def preplists(filelocation):
 
 def loadAuxiliaryData():
 #	Service.logger.debug("Loading auxiliary data for terminology extraction system...")
-	global ngramFilePath, adskUnwordsRoot
-	global ngrams, nowords
-
-#	ngrams = codecs.open(ngramFilePath, "r", "utf-8").read()
-	conn = Service.connectToDB()
-	cursor = conn.cursor()
-	cursor.execute("select LangCode3Ltr from TargetLanguages")
-	langs = cursor.fetchall()
-	conn.close()
-	for lang in langs:
-		if __debug_on__:
-			Service.logger.debug("\t\tReading nGram file " + ngramFilePath+"."+lang[0].upper()+".bz2...")
-		ngrams[lang[0]] = bz2.BZ2File(ngramFilePath+"."+lang[0].upper()+".bz2", "r").read()
+	global adskUnwordsRoot
+	global nowords
 
 	# Load Autodesk-related lists:
-	# - ngram-list (from Ventzi, including only the ngrams without counts)
 	# - NeXLT product names (------ there is an N/A in it???)
 	# - NeXLT language list
 	# - city names from http://www.geodatasource.com/ and http://www.maxmind.com/en/worldcities
@@ -416,7 +401,7 @@ def Getterms(content, lang, prods, returnJSON):
 	#  Maybe these characters should be removed from the beginning...?
 	not_needed = ['.', '^', "'", "\\", "/", "!", '_', '%', "=", '*', '>', '<', '\\', ":", "|"]
 
-	tempSet = set()
+	new_compounds = set()
 	for w in new_chunks:
 	# [Issue not repro.] Remove '@' from multi-word units.	
 		w = w.replace('@', '')
@@ -455,34 +440,13 @@ def Getterms(content, lang, prods, returnJSON):
 					noWordFound = True
 					break
 			if not noWordFound:
-				tempSet.add(w)
-	new_chunks = list(tempSet)
+				new_compounds.add(w)
   
 
 	if __debug_on__:
 		Service.logger.debug("Finished first chunk cleanup.")
 
 	
-	# check if extracted multi-word units are in the ngram list. 
-	compounds_new_to_the_ngram_set = set()
-	
-	
-	counter = 0
-	for wrd in new_chunks:
-		if __debug_on__:
-			counter += 1
-			if not counter % 100:
-				Service.logger.debug(".")
-			if not counter % 5000:
-				Service.logger.debug(str(counter))
-		if re.search(" " + wrd + " ", ngrams[lang]) == None:
-			compounds_new_to_the_ngram_set.add(wrd)
-
-
-	if __debug_on__:
-		Service.logger.debug("Finished n-gram list lookup.")
-
-
 	# extract noun(like) units
 	nouns = [w for w in GetNouns(tagged_sent) if w.isdigit() == False]
 
@@ -498,31 +462,18 @@ def Getterms(content, lang, prods, returnJSON):
 		if not not_needed_found:
 			new_nouns.add(n)
 	
-	new_nouns = [w.lower() for w in new_nouns if (w.lower() not in nowords) and (w in new_content_orig_tok)]
+	new_nouns = set([w.lower() for w in new_nouns if (w.lower() not in nowords) and (w in new_content_orig_tok)])
 
-	counter = 0
-	# check whether nouns exist in the ngram list	
-	nouns_new_to_tm_ngram_set = set()
-	for wrd in new_nouns:
-		if __debug_on__:
-			counter += 1
-			if not counter % 100:
-				Service.logger.debug(".")
-			if not counter % 5000:
-				Service.logger.debug(str(counter))
-		if re.search(" " + wrd + " ", ngrams[lang]) == None:
-			nouns_new_to_tm_ngram_set.add(wrd)
-	
 	if __debug_on__:
 		Service.logger.debug("Finished noun selection.")
 
 	   
 	
-	# Compounds: compounds_new_to_the_ngram_set
-	# Single words: nouns_new_to_tm_ngram_set
+	# Compounds: new_compounds
+	# Single words: new_nouns
 	# Create one group of all chunks
 	# check back if extracted term candidates are in the original text as well
-	new_words_and_compounds = [w for w in compounds_new_to_the_ngram_set.union(nouns_new_to_tm_ngram_set) if w in new_content_orig]
+	new_words_and_compounds = [w for w in new_compounds.union(new_nouns) if w in new_content_orig]
 
 	
 	if __debug_on__:

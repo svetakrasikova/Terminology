@@ -144,7 +144,6 @@ class termHarvestThread (threading.Thread):
 		Extractor.init(dict(
 			adskCorpusRoot = pathname + "/" + dbName + "/auxiliaryData/taggerCorpus",
 			adskUnwordsRoot = pathname + "/" + dbName + "/auxiliaryData/unwords",
-			ngramFilePath = pathname + "/" + dbName + "/auxiliaryData/ngrams",
 			))
 		Extractor.loadAuxiliaryData()
 		logger.debug(u"Training POS tagger…".encode('utf-8'))
