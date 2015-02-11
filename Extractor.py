@@ -97,9 +97,12 @@ Prerequisites:
 
 import nltk, codecs, locale, requests, json, re, bz2, cPickle, os.path
 from nltk.tokenize import LineTokenizer, TreebankWordTokenizer
-from nltk.tag import brill, tnt, DefaultTagger
+from nltk.tag import brill, brill_trainer, tnt, DefaultTagger
+from nltk.tbl.template import Template
+from nltk.tag.brill import Word, Pos
 from nltk.corpus import conll2000, treebank
 from nltk.corpus.reader import TaggedCorpusReader
+from htmllaundry import strip_markup
 from operator import itemgetter
 from functools import cmp_to_key
 
@@ -188,7 +191,7 @@ def trainPOSTagger(useTnTTagger):
 			pos_tagger = cPickle.load(modelFile)
 		except Exception, e:
 			Servide.logger.debug("Exception while loading pickled POS model!")
-			Service.logger.debug(traceback.format_exc())
+			Service.logger.debug(Service.traceback.format_exc())
 		modelFile.close()
 	else:
 		autodesk = TaggedCorpusReader(adskCorpusRoot, '.*', encoding='utf-8')
@@ -235,22 +238,10 @@ def trainPOSTagger(useTnTTagger):
 				(r'^a$', 'PREP'),
 			]
 			raubt_tagger = backoff_tagger(train_sents, [nltk.tag.AffixTagger, nltk.tag.UnigramTagger, nltk.tag.BigramTagger, nltk.tag.TrigramTagger], backoff=nltk.tag.RegexpTagger(word_patterns))
-	 
-			templates = [
-				brill.SymmetricProximateTokensTemplate(brill.ProximateTagsRule, (1,1)),
-				brill.SymmetricProximateTokensTemplate(brill.ProximateTagsRule, (2,2)),
-				brill.SymmetricProximateTokensTemplate(brill.ProximateTagsRule, (1,2)),
-				brill.SymmetricProximateTokensTemplate(brill.ProximateTagsRule, (1,3)),
-				brill.SymmetricProximateTokensTemplate(brill.ProximateWordsRule, (1,1)),
-				brill.SymmetricProximateTokensTemplate(brill.ProximateWordsRule, (2,2)),
-				brill.SymmetricProximateTokensTemplate(brill.ProximateWordsRule, (1,2)),
-				brill.SymmetricProximateTokensTemplate(brill.ProximateWordsRule, (1,3)),
-				brill.ProximateTokensTemplate(brill.ProximateTagsRule, (-1, -1), (1,1)),
-				brill.ProximateTokensTemplate(brill.ProximateWordsRule, (-1, -1), (1,1))
-			]
-		 
-			trainer = brill.FastBrillTaggerTrainer(raubt_tagger, templates)
-			pos_tagger = trainer.train(train_sents, max_rules=200, min_score=3)
+			Service.logger.debug("Raubt tagger ready!")
+	 		 
+			trainer = brill_trainer.BrillTaggerTrainer(raubt_tagger, brill.brill24())
+			pos_tagger = trainer.train(train_sents, max_rules=500, min_score=3)
 			
 		Service.logger.debug("Storing POS tagger model to %s" % storedModel)
 		modelFile = open(storedModel, "wb")
@@ -276,23 +267,16 @@ def Getterms(content, lang, prods, returnJSON):
 	new_content_orig_tok = set()
 	
 	for seg in set(content):
-		seg = seg.replace('\\r','\r') # Treating UI strings containing \r escapes
-		seg = seg.replace('\\n','\n') # Treating UI strings containing \n escapes
-		seg = seg.replace('\r\n','\n')# Collapsing new lines
-		seg = seg.replace('\n ','\n') # Clean-up the line endings—not sure if useful at all
+		# Mask { and } as they clash with the inner workings of the chunker
+		seg = seg.replace(u"{",u"﹛").replace(u"}",u"﹜")
+
+		# Treating UI strings containing \r escapes # Treating UI strings containing \n escapes # Collapsing new lines # Clean-up the line endings—not sure if useful at all
+		seg = seg.replace('\\r','\r').replace('\\n','\n').replace('\r\n','\n').replace('\n ','\n')
 		new_content_orig += " " + seg
 		for word in word_tok.tokenize(seg):
 			new_content_orig_tok.add(word)
 
-		seg = seg.replace('%','')
-		seg = seg.replace(".. ."," ...")
-		seg = seg.replace('<openparen>','(')
-		seg = seg.replace('<closeparen>',')')
-		seg = seg.replace("&apos;","'")
-		seg = seg.replace('&quot;', '"')
-		seg = seg.replace('&amp;', '&')
-		seg = seg.replace('&lt;', '<')
-		seg = seg.replace('&gt;', '>')
+		seg = seg.replace('%','').replace(".. ."," ...").replace('<openparen>','(').replace('<closeparen>',')').replace("&apos;","'").replace('&quot;', '"').replace('&amp;', '&').replace('&lt;', '<').replace('&gt;', '>')
 
 	# Do the following even occur in our data?
 	#	new_content = new_content.replace('&circ;', '^')
@@ -308,24 +292,20 @@ def Getterms(content, lang, prods, returnJSON):
 	#	new_content = new_content.replace('&permil;', '‰')
 	#	new_content = new_content.replace('&euro;', '€')
 	
-		seg_htmlcleaned = nltk.clean_html(seg)
-		seg = seg_htmlcleaned.replace('\\t','\n')
+		# Strip HTML/XML markup
+		seg = strip_markup(seg).replace('\\t','\n')
 
 		# Some very crude pre-tokenisation
-		seg = seg.replace(':',' :')
-		seg = seg.replace('\t','\n')
-		seg = seg.replace("\\", '\n')
-		seg = seg.replace('|','\n')
+		seg = seg.replace(':',' :').replace('\t','\n').replace("\\", '\n').replace('|','\n')
 
 
 		# It’s not quite clear what this is supposed to do
-		seg = seg.replace("&","")
-		seg = seg.replace("[\\w]+_[\\w]+","\n")
-		seg = seg.replace("[\\w]+_","\n")
-		seg = seg.replace("_[\\w]+","\n")
-
+		seg = seg.replace("&","").replace("[\\w]+_[\\w]+","\n").replace("[\\w]+_","\n").replace("_[\\w]+","\n")
+		
 #		Service.logger.debug("Segment: " + seg)
 		for seg in sent_tokenizer.tokenize(seg):
+			# Unmask { and }
+			seg = seg.replace(u"﹛",u"{").replace(u"﹜",u"}")
 			new_content.add(seg)
 	
 
@@ -352,7 +332,7 @@ def Getterms(content, lang, prods, returnJSON):
 					l.remove(t)
    
 	# POS tag sentences
-	tagged_sent = pos_tagger.batch_tag(new_content_tokenized)
+	tagged_sent = pos_tagger.tag_sents(new_content_tokenized)
 
 	if __debug_on__:
 		Service.logger.debug("Finished main POS tagging.")
@@ -372,10 +352,12 @@ def Getterms(content, lang, prods, returnJSON):
 			try:
 				tree = cp.parse(sent)
 				for subtree in tree.subtrees():
-					if subtree.node == 'CHUNK':
+					if subtree.label() == 'CHUNK':
 						chunks.add(' '.join([l[0] for l in subtree.leaves()]))
 			except:
 				bad_stemmer_1 += 1
+				Service.logger.debug("Issues with chunker 1!".encode('utf-8'))
+				Service.logger.debug(Service.traceback.format_exc())
 				# Service.logger.debug("1+")
 				# Service.logger.debug("Bad stemmer 1: "+str(sent))
 		return chunks
@@ -390,10 +372,12 @@ def Getterms(content, lang, prods, returnJSON):
 			try:
 				tree = cp.parse(sent)
 				for subtree in tree.subtrees():
-					if subtree.node == 'CHUNK':
+					if subtree.label() == 'CHUNK':
 						chunks.add(' '.join([l[0] for l in subtree.leaves()]))
 			except:
 				bad_stemmer_3 += 1
+				Service.logger.debug("Issues with chunker 3!".encode('utf-8'))
+				Service.logger.debug(Service.traceback.format_exc())
 				# Service.logger.debug("3+")
 		return chunks
 
@@ -407,10 +391,12 @@ def Getterms(content, lang, prods, returnJSON):
 			try:
 				tree = cp.parse(sent)
 				for subtree in tree.subtrees():
-					if subtree.node == 'CHUNK':
+					if subtree.label() == 'CHUNK':
 						chunks.add(' '.join([l[0] for l in subtree.leaves()]))
 			except:
 				bad_stemmer_4 += 1
+				Service.logger.debug("Issues with chunker 4!".encode('utf-8'))
+				Service.logger.debug(Service.traceback.format_exc())
 				# Service.logger.debug("4+")
 		return chunks
 	
@@ -617,6 +603,8 @@ def Getterms(content, lang, prods, returnJSON):
 	terms = []
 
 	for term in new_words_and_compounds_in_product:
+		# Unmask { and }
+		term = term.replace(u"﹛",u"{").replace(u"﹜",u"}")
 		contexts = [con for con in new_content if term.lower() in con.lower()]
 		# Skip any terms that cannot be found in the original source. We cannot provide terms with no context to translators.
 		if len(contexts) == 0:
