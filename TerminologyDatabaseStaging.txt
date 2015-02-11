@@ -269,6 +269,15 @@ INSERT INTO Terminology_staging.TargetLanguages (LangCode2Ltr, LangCode3Ltr, Lan
 INSERT INTO Terminology_staging.TargetLanguages (LangCode2Ltr, LangCode3Ltr, LangName, LastUpdate) VALUES ('zh-hans', 'chs', 'Simplified Chinese', null);
 INSERT INTO Terminology_staging.TargetLanguages (LangCode2Ltr, LangCode3Ltr, LangName, LastUpdate) VALUES ('zh-hant', 'cht', 'Traditional Chinese', null);
 
+INSERT INTO Terminology_staging.TargetLanguages (LangCode2Ltr, LangCode3Ltr, LangName, LastUpdate) VALUES ('en-au', 'ena', 'Australian English', null);
+INSERT INTO Terminology_staging.TargetLanguages (LangCode2Ltr, LangCode3Ltr, LangName, LastUpdate) VALUES ('fr-be', 'frb', 'French (Belgium)', null);
+INSERT INTO Terminology_staging.TargetLanguages (LangCode2Ltr, LangCode3Ltr, LangName, LastUpdate) VALUES ('fr-ca', 'frc', 'French (Canada)', null);
+INSERT INTO Terminology_staging.TargetLanguages (LangCode2Ltr, LangCode3Ltr, LangName, LastUpdate) VALUES ('he', 'heb', 'Hebrew', null);
+INSERT INTO Terminology_staging.TargetLanguages (LangCode2Ltr, LangCode3Ltr, LangName, LastUpdate) VALUES ('hi', 'hin', 'Hindi', null);
+INSERT INTO Terminology_staging.TargetLanguages (LangCode2Ltr, LangCode3Ltr, LangName, LastUpdate) VALUES ('id', 'ind', 'Indonesian', null);
+INSERT INTO Terminology_staging.TargetLanguages (LangCode2Ltr, LangCode3Ltr, LangName, LastUpdate) VALUES ('vi', 'vie', 'Vietnamese', null);
+
+
 INSERT INTO Terminology_staging.Glossaries (GlossaryName, LastUpdate) VALUES ('123D', null);
 INSERT INTO Terminology_staging.Glossaries (GlossaryName, LastUpdate) VALUES ('PLM360', null);
 INSERT INTO Terminology_staging.Glossaries (GlossaryName, LastUpdate) VALUES ('3DSMAX', null);
@@ -686,3 +695,9 @@ DELETE FROM Terminology.Glossaries WHERE ID = 49;
 
 select * from TermList where JobID = 1379
 delete from PendingJobs where ID >= 1380
+
+
+select * from TermList where Term rlike '(^| )option.*' order by LangCode3Ltr asc, Term asc, ProductName asc limit 2 offset 1
+
+select count(TermID) as Records from TermList where Term rlike '(^| )advanced.*'  and LangCode3Ltr = (select LangCode3Ltr from TargetLanguages where ID = 18) order by Term asc, ProductName asc
+select * from TermList where Term rlike '(^| )advanced.*'  and LangCode3Ltr = (select LangCode3Ltr from TargetLanguages where ID = 18) order by Term asc, ProductName asc limit 10 offset 1
