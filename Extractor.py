@@ -514,9 +514,9 @@ def Getterms(content, lang, prods, returnJSON):
 	def QueryNeXLT(term, language, prod_name):
 		r = None
 		if Service.isStaging:
-			r = requests.get("http://aws.stg.solr:8983/solr/select/?wt=json&start=0&rows=1&q=enu%3A%22" + term + "%22%20AND%20product:"  + prod_name +  "%20AND%20" + language + ":['' TO *]")
+			r = requests.get("http://aws.stg.solr:8983/search/select/?wt=json&start=0&rows=1&q=enu%3A%22" + term + "%22%20AND%20product:"  + prod_name +  "%20AND%20" + language + ":['' TO *]")
 		else:
-			r = requests.get("http://aws.prd.solr:8983/solr/select/?wt=json&start=0&rows=1&q=enu%3A%22" + term + "%22%20AND%20product:"  + prod_name +  "%20AND%20" + language + ":['' TO *]")
+			r = requests.get("http://aws.prd.solr:8983/search/select/?wt=json&start=0&rows=1&q=enu%3A%22" + term + "%22%20AND%20product:"  + prod_name +  "%20AND%20" + language + ":['' TO *]")
 		r.encoding = "utf-8"
 		try:
 			response = r.json()['response']['numFound']
@@ -528,9 +528,9 @@ def Getterms(content, lang, prods, returnJSON):
 	def QueryNeXLTAllProds(term, language):
 		r = None
 		if Service.isStaging:
-			r = requests.get("http://aws.stg.solr:8983/solr/select/?wt=json&start=0&rows=1&q=enu%3A%22" + term + "%22%20AND%20product:"  + '*' +  "%20AND%20" + language + ":['' TO *]")
+			r = requests.get("http://aws.stg.solr:8983/search/select/?wt=json&start=0&rows=1&q=enu%3A%22" + term + "%22%20AND%20product:"  + '*' +  "%20AND%20" + language + ":['' TO *]")
 		else:
-			r = requests.get("http://aws.prd.solr:8983/solr/select/?wt=json&start=0&rows=1&q=enu%3A%22" + term + "%22%20AND%20product:"  + '*' +  "%20AND%20" + language + ":['' TO *]")
+			r = requests.get("http://aws.prd.solr:8983/search/select/?wt=json&start=0&rows=1&q=enu%3A%22" + term + "%22%20AND%20product:"  + '*' +  "%20AND%20" + language + ":['' TO *]")
 		r.encoding = "utf-8"
 		try:
 			response = r.json()['response']['numFound']
