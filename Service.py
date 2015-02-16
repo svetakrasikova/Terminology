@@ -73,7 +73,7 @@
 #
 #####################
 
-isStaging = True
+isStaging = False
 
 dbName = "Terminology"
 if (isStaging):
@@ -714,11 +714,15 @@ def TermList():
 			result = cursor.fetchone()
 			if result:
 				language = result['LangName']
+		else:
+			langID = 0
 		if prodID and prodID != '0':
 			cursor.execute("select ProductName from Products where ID = %s limit 1" % prodID)
 			result = cursor.fetchone()
 			if result:
 				productName = result['ProductName']
+		else:
+			prodID = 0
 	if terms:
 # 		logger.debug("We have terms to show!")
 		cursor.execute("update TargetLanguages set LastUsed=CURRENT_TIMESTAMP where LangCode3Ltr='%s' limit 1" % terms[0]['LangCode3Ltr'])
@@ -860,6 +864,7 @@ def terminology():
 		conn.close()
 		return render_template('TermList.html',
 			jobString = jobString['JobString'],
+			total = 0,
 			recentLanguages = recentLangs,
 			recentProducts = recentProds,
 			latestJobs = lateJobs,
@@ -881,6 +886,7 @@ def terminology():
 		conn.close()
 		return render_template('TermList.html',
 			jobString = jobString['JobString'],
+			total = 0,
 			recentLanguages = recentLangs,
 			recentProducts = recentProds,
 			latestJobs = lateJobs,
