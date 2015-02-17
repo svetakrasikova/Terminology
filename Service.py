@@ -73,7 +73,7 @@
 #
 #####################
 
-isStaging = False
+isStaging = True
 
 dbName = "Terminology"
 if (isStaging):
@@ -765,9 +765,13 @@ def TermList():
 	elif jobID:
 		cursor.execute("select concat('job ', concat_ws(', ', ProductCode, LangCode3Ltr, ContentType)) as JobString from JobList where JobID = %s limit 1" % jobID)
 		jobString = cursor.fetchone()
+		if not jobString:
+			jobStringTxt = ""
+		else:
+			jobStringTxt = jobString['JobString']
 		conn.close()
 		return render_template('TermList.html',
-			jobString = jobString['JobString'],
+			jobString = jobStringTxt,
 			total = 0,
 			jobID = jobID,
 			language = language,
