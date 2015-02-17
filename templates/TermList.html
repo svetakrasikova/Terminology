@@ -11,5 +11,5 @@
 		{% block contentLanguageColumnHeader %}{% if not language %}{{ super() }}{% endif %}{% endblock contentLanguageColumnHeader %}
 		{% block contentContentColumnHeader %}{{ super() }}{% endblock contentContentColumnHeader %}
 		{% else %}
-		{% block contentNoTerms %}{% if searchTerm %}No terms found matching your search query.{% else %}No terms were extracted {% if jobID %}or the job is still pending{% else %}for {% if productName and language %}these{% else %}this{% endif %} {% if productName %}product{% endif %}{% if productName and language %} and {% endif %}{% if language %}language{% endif %}{% endif %}.{% endif %}{% endblock contentNoTerms %}
+		{% block contentNoTerms %}{% if searchTerm %}No terms found matching your search query.{% else %}{% if jobString %}No terms were extracted {% if jobID %}or the job is still pending{% else %}for {% if productName and language %}these{% else %}this{% endif %} {% if productName %}product{% endif %}{% if productName and language %} and {% endif %}{% if language %}language{% endif %}{% endif %}.{% else %}<span class="redCell">The job you were looking for could not be found!</span><br>Check that you are using the correct URL and that the job exists in the <a href="JobList.html">job list</a>.{% endif %}{% endif %}{% endblock contentNoTerms %}
 		{% endif %}
