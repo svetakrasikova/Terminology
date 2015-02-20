@@ -8,8 +8,9 @@
 # Changelog
 # !!! Subsequent changes tracked on GitHub only !!!
 #
-# v3.4.1	Modified on 19 Feb 2015 by Mohamed Marzouk
-# Adding conn.escape_string(dbparam) to escape secial characters 
+# v3.4.1    Modified on 19 Feb 2015 by Mohamed Marzouk
+#  The Term Translation Central should be secure against malicious attacks, so that It doesn’t have to spend time on
+#  recovery if the service is compromised (adding the conn.escape_string(dbparam) to all the parameters in an SQL query)
 #
 # v3.4		Modified on 30 Jan 2015 by Samuel Läubli
 # Term translations are now pushed to Solr/NeXLT as soon as they are approved. Translations from the Term Translation
