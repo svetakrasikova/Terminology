@@ -9,7 +9,7 @@
 # !!! Subsequent changes tracked on GitHub only !!!
 #
 # v3.4.1	Modified on 26 Feb 2015 by Mohamed Marzouk
-# Changing the cursor.execute() to disable sql injection
+# Changing the cursor.execute() so as to make it secure and disable sql injection
 #
 # v3.4		Modified on 30 Jan 2015 by Samuel Läubli
 # Term translations are now pushed to Solr/NeXLT as soon as they are approved. Translations from the Term Translation
