@@ -188,29 +188,31 @@ class termHarvestThread (threading.Thread):
 				for term in terms:
 #					termCounter = termCounter + 1
 #					logger.debug(u"inserting source term %s %s, %s" % (termCounter, term[0], term[1]))
-					sql = "insert into SourceTerms(Term) values ('%s') on duplicate key update ID=last_insert_id(ID)" % conn.escape_string(term[0])
 # 					logger.debug("SQL: %s\n" % sql)
-					cursor.execute(sql)
+					cursor.execute("insert into SourceTerms(Term) values (%s) on duplicate key update ID=last_insert_id(ID)", (conn.escape_string(term[0]),))
 					cursor.execute("select last_insert_id()")
 					sourceTermID, = cursor.fetchone()
-					sql = "insert into TermTranslations(JobID, SourceTermID, LanguageID, ProductID, GlossID, ContentTypeID, NewTo, DateRequested) values (%s, %s, %s, %s, %s, %s, '%s', NULL) on duplicate key update ID=last_insert_id(ID), DateUpdated=CURRENT_TIMESTAMP, ContentTypeID=selectContentTypeID(ContentTypeID, %s)" % (jobID, sourceTermID, language[0], products[0][0], products[0][1], contentID, conn.escape_string(term[1]), contentID)
 #					logger.debug("SQL: %s\n" % sql)
-					cursor.execute(sql)
+					cursor.execute("insert into TermTranslations(JobID, SourceTermID, LanguageID, ProductID, GlossID, ContentTypeID, NewTo, DateRequested) values (%s, %s, %s, %s, %s, %s, %s, NULL) on duplicate key update ID=last_insert_id(ID), DateUpdated=CURRENT_TIMESTAMP, ContentTypeID=selectContentTypeID(ContentTypeID, %s)", (jobID, sourceTermID, language[0], products[0][0], products[0][1], contentID, conn.escape_string(term[1]), contentID))
 					cursor.execute("select last_insert_id()")
 					termTranslationID, = cursor.fetchone()
 					sql = "insert into TermContexts(TermTranslationID, ContentTypeID, SourceContext, MTofContext) values "
+					dbparams = ()
 					for context in term[2]:
 						if contextDict[context] == "":
-							sql += "(%s, %s, '%s', null), " % (termTranslationID, contentID, conn.escape_string(context))
+							sql += "(%s, %s, %s, null), "
+							dbparams += (termTranslationID, contentID, conn.escape_string(context))
 						else:
-							sql += "(%s, %s, '%s', '%s'), " % (termTranslationID, contentID, conn.escape_string(context), conn.escape_string(contextDict[context]))
-					sql = sql[:-2] + " on duplicate key update LastUpdate=NULL, ContentTypeID=selectContentTypeID(ContentTypeID, %s)" % (contentID)
+							sql += "(%s, %s, %s, %s), "
+							dbparams += (termTranslationID, contentID, conn.escape_string(context), conn.escape_string(contextDict[context]))
+					sql = sql[:-2] + " on duplicate key update LastUpdate=NULL, ContentTypeID=selectContentTypeID(ContentTypeID, %s)"
+					dbparams += (contentID,)
 #					logger.debug("SQL: %s\n" % sql)
-					cursor.execute(sql)
+					cursor.execute(sql, dbparams)
 					
 				logger.debug(u"Finished inserting terms, pending DB commit…")
 				#finished processing job
-				cursor.execute("update PendingJobs set Pending=0, DateProcessed=CURRENT_TIMESTAMP where ID=%s limit 1", jobID)
+				cursor.execute("update PendingJobs set Pending=0, DateProcessed=CURRENT_TIMESTAMP where ID=%s limit 1", (jobID,))
 				conn.commit()
 				conn.close()
 				logger.debug(u"DB commit done!")
@@ -332,7 +334,7 @@ def isSupportedContent(content, conn):
 	if content == "Both":
 		return None
 	cursor = conn.cursor()
-	cursor.execute("select ID from ContentTypes where ContentType='%s' limit 1" % content)
+	cursor.execute("select ID from ContentTypes where ContentType='%s' limit 1", (content,))
 	result = cursor.fetchone()
 	if not result:
 		return None
@@ -340,19 +342,19 @@ def isSupportedContent(content, conn):
 
 def isSupportedProduct(prod, conn):
 	cursor = conn.cursor()
-	cursor.execute("select ProductCode from Products where GlossID = (select GlossID from Products where ProductCode = '" + prod + "')")
+	cursor.execute("select ProductCode from Products where GlossID = (select GlossID from Products where ProductCode = '%s')", (prod,))
 	result = cursor.fetchall()
 	if not result:
 		return None
-	cursor.execute("select ID, GlossID from Products where ProductCode = '" + prod + "' limit 1")
+	cursor.execute("select ID, GlossID from Products where ProductCode = '%s' limit 1", (prod,))
 	return (cursor.fetchone(), [p[0] for p in result])
 
 def isSupportedLanguage(lang, conn):
 	cursor = conn.cursor()
-	cursor.execute("select ID, LangCode3Ltr, LangCode2Ltr from TargetLanguages where LangCode2Ltr = '" + lang + "' limit 1")
+	cursor.execute("select ID, LangCode3Ltr, LangCode2Ltr from TargetLanguages where LangCode2Ltr = '%s' limit 1", (lang,))
 	result = cursor.fetchone()
 	if not result:
-		cursor.execute("select ID, LangCode3Ltr, LangCode2Ltr from TargetLanguages where LangCode3Ltr = '" + lang + "' limit 1")
+		cursor.execute("select ID, LangCode3Ltr, LangCode2Ltr from TargetLanguages where LangCode3Ltr = '%s' limit 1", (lang,))
 		result = cursor.fetchone()
 		if not result:
 			return None
@@ -431,8 +433,7 @@ def termharvest():
 	
 	try:
 		if len(threads) > 0:
-			sql = "insert into PendingJobs(ContentTypeID, ProductID, LanguageID) values (%s, %s, %s)" % (contentID, prods[0][0], language[0])
-			cursor.execute(sql)
+			cursor.execute("insert into PendingJobs(ContentTypeID, ProductID, LanguageID) values (%s, %s, %s)", (contentID, prods[0][0], language[0]))
 			jobID = conn.insert_id()
 			conn.commit()
 			jobQueue.put((jobID, contentID, prods, language, requestContent['data']))
@@ -482,7 +483,7 @@ def index():
 			userLastName = result.group(3)
 			conn = connectToDB()
 			cursor = conn.cursor()
-			cursor.execute("insert into Users(ID, FirstName, LastName) values(%s, '%s', '%s') on duplicate key update FirstName='%s', LastName='%s'" % (userID, conn.escape_string(userFirstName), conn.escape_string(userLastName), conn.escape_string(userFirstName), conn.escape_string(userLastName)))
+			cursor.execute("insert into Users(ID, FirstName, LastName) values(%s, %s, %s) on duplicate key update FirstName=%s, LastName=%s", (userID, conn.escape_string(userFirstName), conn.escape_string(userLastName), conn.escape_string(userFirstName), conn.escape_string(userLastName)))
 			conn.commit()
 			conn.close()
 			session['UserID'] = userID
@@ -527,7 +528,7 @@ def index():
 			userLastName = result.group(3)
 			conn = connectToDB()
 			cursor = conn.cursor()
-			cursor.execute("insert into Users(ID, FirstName, LastName) values(%s, '%s', '%s') on duplicate key update FirstName='%s', LastName='%s'" % (userID, conn.escape_string(userFirstName), conn.escape_string(userLastName), conn.escape_string(userFirstName), conn.escape_string(userLastName)))
+			cursor.execute("insert into Users(ID, FirstName, LastName) values(%s, %s, %s) on duplicate key update FirstName=%s, LastName=%s", (userID, conn.escape_string(userFirstName), conn.escape_string(userLastName), conn.escape_string(userFirstName), conn.escape_string(userLastName)))
 			conn.commit()
 			conn.close()
 			session['UserID'] = userID
@@ -587,7 +588,7 @@ def TermListPerl():
 	
 	conn = connectToDB()
 	cursor = conn.cursor(pymysql.cursors.DictCursor)
-	cursor.execute("select Term, TermTranslation from TermList where LangCode2Ltr = '%s' and ProductCode in (select ProductCode from ProductGlossaries where GlossaryName = '%s') and Approved = b'1' and IgnoreTerm = b'0'" % (language, glossary))
+	cursor.execute("select Term, TermTranslation from TermList where LangCode2Ltr = %s and ProductCode in (select ProductCode from ProductGlossaries where GlossaryName = %s) and Approved = b'1' and IgnoreTerm = b'0'", (language, glossary))
 	terms = cursor.fetchall()
 	conn.close()
 	if not terms:
@@ -600,6 +601,7 @@ def TermListPerl():
 
 @app.route('/TermList.html', methods=['GET'])
 def TermList():
+	dbParams = ()
 	try:
 		dataOffset = int(request.args.get('offset', 0))
 	except:
@@ -618,10 +620,7 @@ def TermList():
 	langID = 0
 	prodID = 0
 	search = ""
-	try:
-		jobID = int(request.args.get('jobID', ''))
-	except:
-		jobID = 0
+	jobID = request.args.get('jobID', '')
 	if not jobID:
 		langID = request.args.get('langID', '')
 		prodID = request.args.get('prodID', '')
@@ -644,13 +643,16 @@ def TermList():
 	sql = ""
 	if jobID:
 		contentColumnCount = contentColumnCount + 1
-		sql = " from TermList where JobID = %s order by Term asc" % jobID
+		sql = " from TermList where JobID = %s order by Term asc"
+		dbParams += (jobID,)
 	else:
 		sql = " from TermList"
 		if not search or search == '':
 			searchsql = ""
 		else:
-			searchsql = " Term rlike '(^| )%s.*' " % conn.escape_string(search)
+			searchsql = " Term rlike '(^| )%s.*' " 
+			dbParams += (conn.escape_string(search),)
+			
 		if not langID or langID == '0':
 			if not prodID or prodID == '0':
 				contentColumnCount = contentColumnCount + 3
@@ -664,21 +666,24 @@ def TermList():
 				showLanguageColumn = True
 				if searchsql:
 					searchsql = searchsql + " and"
-				sql = sql + " where" + searchsql + " ProductCode = (select ProductCode from Products where ID = %s) order by LangCode3Ltr asc, Term asc" % prodID
+				sql = sql + " where" + searchsql + " ProductCode = (select ProductCode from Products where ID = %s) order by LangCode3Ltr asc, Term asc" 
+				dbParams += (prodID,)
 		elif not prodID or prodID == '0':
 			contentColumnCount = contentColumnCount + 2#
 			showProductColumn = True
 			if searchsql:
 				searchsql = searchsql + " and"
-			sql =  sql + " where" + searchsql + " LangCode3Ltr = (select LangCode3Ltr from TargetLanguages where ID = %s) order by Term asc, ProductName asc" % langID
+			sql =  sql + " where" + searchsql + " LangCode3Ltr = (select LangCode3Ltr from TargetLanguages where ID = %s) order by Term asc, ProductName asc" 
+			dbParams += (langID,)
 		else:
 			contentColumnCount = contentColumnCount + 1
 			if searchsql:
 				searchsql = searchsql + " and"
-			sql =  sql + " where" + searchsql + " LangCode3Ltr = (select LangCode3Ltr from TargetLanguages where ID = %s) and ProductCode = (select ProductCode from Products where ID = %s) order by Term asc" % (langID, prodID)
+			sql =  sql + " where" + searchsql + " LangCode3Ltr = (select LangCode3Ltr from TargetLanguages where ID = %s) and ProductCode = (select ProductCode from Products where ID = %s) order by Term asc"
+			dbParams += (langID, prodID, )
 	if not dataRecords or dataRecords == '0':
 # 		logger.debug("Counting total terms using following SQL:\n"+"select count(TermID) as Records"+sql)
-		cursor.execute("select count(TermID) as Records"+sql)
+		cursor.execute("select count(TermID) as Records"+sql, dbParams)
 		recordCount = cursor.fetchone()
 		if recordCount:
 			dataRecords = recordCount['Records']
@@ -689,7 +694,7 @@ def TermList():
 		if dataOffset >= dataRecords:
 			dataOffset = 0
 # 		logger.debug("Selecting terms to display using following SQL:\n"+"select *"+sql+" limit %s offset %s" % (dataPageSize, dataOffset))
-		cursor.execute("select *"+sql+" limit %s offset %s" % (dataPageSize, dataOffset))
+		cursor.execute("select *"+sql+" limit %s offset %s", dbParams + (dataPageSize, dataOffset))
 		terms = cursor.fetchall()
 	recentLangs = recentLanguages(cursor)
 	recentProds = recentProducts(cursor)
@@ -698,35 +703,34 @@ def TermList():
 	language = ""
 	productName = ""
 	if jobID:
-		cursor.execute("select LangName, ProductName from JobList where JobID = %s limit 1" % jobID)
+		cursor.execute("select LangName, ProductName from JobList where JobID = %s limit 1", (jobID,))
 		result = cursor.fetchone()
 		if result:
 			language = result['LangName']
 			productName = result['ProductName']
-		cursor.execute("select LanguageID, ProductID from PendingJobs where ID = %s limit 1" % jobID)
+		cursor.execute("select LanguageID, ProductID from PendingJobs where ID = %s limit 1", (jobID,))
 		result = cursor.fetchone()
 		if result:
 			langID = result['LanguageID']
 			prodID = result['ProductID']
 	else:
 		if langID and langID != '0':
-			cursor.execute("select LangName from TargetLanguages where ID = %s limit 1" % langID)
+			cursor.execute("select LangName from TargetLanguages where ID = %s limit 1", (langID,))
 			result = cursor.fetchone()
 			if result:
 				language = result['LangName']
 		else:
 			langID = 0
 		if prodID and prodID != '0':
-			cursor.execute("select ProductName from Products where ID = %s limit 1" % prodID)
+			cursor.execute("select ProductName from Products where ID = %s limit 1", (prodID,))
 			result = cursor.fetchone()
 			if result:
 				productName = result['ProductName']
 		else:
 			prodID = 0
 	if terms:
-# 		logger.debug("We have terms to show!")
-		cursor.execute("update TargetLanguages set LastUsed=CURRENT_TIMESTAMP where LangCode3Ltr='%s' limit 1" % terms[0]['LangCode3Ltr'])
-		cursor.execute("update Products set LastUsed=CURRENT_TIMESTAMP where ProductCode='%s' limit 1" % terms[0]['ProductCode'])
+		cursor.execute("update TargetLanguages set LastUsed=CURRENT_TIMESTAMP where LangCode3Ltr=%s limit 1",  (terms[0]['LangCode3Ltr'],))
+		cursor.execute("update Products set LastUsed=CURRENT_TIMESTAMP where ProductCode=%s limit 1", (terms[0]['ProductCode'],))
 		conn.commit()
 		conn.close()
 		productCode = ""
@@ -763,7 +767,7 @@ def TermList():
 				showLanguageColumn = showLanguageColumn
 				)
 	elif jobID:
-		cursor.execute("select concat('job ', concat_ws(', ', ProductCode, LangCode3Ltr, ContentType)) as JobString from JobList where JobID = %s limit 1" % jobID)
+		cursor.execute("select concat('job ', concat_ws(', ', ProductCode, LangCode3Ltr, ContentType)) as JobString from JobList where JobID = %s limit 1", (jobID,))
 		jobString = cursor.fetchone()
 		if not jobString:
 			jobStringTxt = ""
@@ -784,7 +788,7 @@ def TermList():
 			userName = userFirstName + " " + userLastName,
 			STAGING = isStaging)
 	else:
-		cursor.execute("select concat_ws(', ', ProductName, LangName) as JobString from Products, TargetLanguages where Products.ID = %s and TargetLanguages.ID = %s limit 1" % (prodID, langID))
+		cursor.execute("select concat_ws(', ', ProductName, LangName) as JobString from Products, TargetLanguages where Products.ID = %s and TargetLanguages.ID = %s limit 1", (prodID, langID))
 		jobString = cursor.fetchone()
 		if not jobString:
 			jobStringTxt = ""
@@ -807,6 +811,8 @@ def TermList():
 					
 @app.route('/terminology.tbx', methods=['GET'])
 def terminology():
+	
+	
 	jobID = 0
 	langID = 0
 	prodID = 0
@@ -824,7 +830,7 @@ def terminology():
 	conn = connectToDB()
 	cursor = conn.cursor(pymysql.cursors.DictCursor)
 	if jobID:
-		cursor.execute("select * from TermList where Approved = b'1' and IgnoreTerm = b'0' and JobID = %s order by Term asc" % jobID)
+		cursor.execute("select * from TermList where Approved = b'1' and IgnoreTerm = b'0' and JobID = %s order by Term asc", (jobID,))
 	else:
 		langID = request.args.get('langID', '')
 		prodID = request.args.get('prodID', '')
@@ -832,11 +838,11 @@ def terminology():
 			if not prodID or prodID == '0':
 				cursor.execute("select * from TermList where Approved = b'1' and IgnoreTerm = b'0' order by LangCode3Ltr asc, Term asc, ProductName asc")
 			else:
-				cursor.execute("select * from TermList where Approved = b'1' and IgnoreTerm = b'0' and ProductCode = (select ProductCode from Products where ID = %s) order by LangCode3Ltr asc, Term asc" % prodID)
+				cursor.execute("select * from TermList where Approved = b'1' and IgnoreTerm = b'0' and ProductCode = (select ProductCode from Products where ID = %s) order by LangCode3Ltr asc, Term asc", (prodID,))
 		elif not prodID or prodID == '0':
-			cursor.execute("select * from TermList where Approved = b'1' and IgnoreTerm = b'0' and LangCode3Ltr = (select LangCode3Ltr from TargetLanguages where ID = %s) order by Term asc, ProductName asc" % langID)
+			cursor.execute("select * from TermList where Approved = b'1' and IgnoreTerm = b'0' and LangCode3Ltr = (select LangCode3Ltr from TargetLanguages where ID = %s) order by Term asc, ProductName asc", (langID,))
 		else:
-			cursor.execute("select * from TermList where Approved = b'1' and IgnoreTerm = b'0' and ProductCode = (select ProductCode from Products where ID = %s) and LangCode3Ltr = (select LangCode3Ltr from TargetLanguages where ID = %s) order by Term asc, ProductName asc" % (prodID, langID))
+			cursor.execute("select * from TermList where Approved = b'1' and IgnoreTerm = b'0' and ProductCode = (select ProductCode from Products where ID = %s) and LangCode3Ltr = (select LangCode3Ltr from TargetLanguages where ID = %s) order by Term asc, ProductName asc", (prodID, langID,))
 	
 	terms = cursor.fetchall()
 	glossary = {}
@@ -863,7 +869,7 @@ def terminology():
 		response.headers['Content-Type'] = "text/tbx; charset=utf-8"
 		return response
 	elif jobID:
-		cursor.execute("select concat('job ', concat_ws(', ', ProductCode, LangCode3Ltr, ContentType)) as JobString from JobList where JobID = %s limit 1" % jobID)
+		cursor.execute("select concat('job ', concat_ws(', ', ProductCode, LangCode3Ltr, ContentType)) as JobString from JobList where JobID = %s limit 1", (jobID,))
 		jobString = cursor.fetchone()
 		conn.close()
 		return render_template('TermList.html',
@@ -881,11 +887,11 @@ def terminology():
 			if not prodID or prodID == '0':
 				cursor.execute("select concat_ws(', ', 'All products', 'All languages')")
 			else:
-				cursor.execute("select concat_ws(', ', ProductName, 'All languages') as JobString from Products where Products.ID = %s limit 1" % prodID)
+				cursor.execute("select concat_ws(', ', ProductName, 'All languages') as JobString from Products where Products.ID = %s limit 1", (prodID,))
 		elif not prodID or prodID == '0':
-			cursor.execute("select concat_ws(', ', 'All products', LangName) as JobString from TargetLanguages where TargetLanguages.ID = %s limit 1" % langID)
+			cursor.execute("select concat_ws(', ', 'All products', LangName) as JobString from TargetLanguages where TargetLanguages.ID = %s limit 1", (langID,))
 		else:
-			cursor.execute("select concat_ws(', ', ProductName, LangName) as JobString from Products, TargetLanguages where Products.ID = %s and TargetLanguages.ID = %s limit 1" % (prodID, langID))
+			cursor.execute("select concat_ws(', ', ProductName, LangName) as JobString from Products, TargetLanguages where Products.ID = %s and TargetLanguages.ID = %s limit 1", (prodID, langID,))
 		jobString = cursor.fetchone()
 		conn.close()
 		return render_template('TermList.html',
@@ -901,6 +907,7 @@ def terminology():
 		
 @app.route('/JobList.html', methods=['GET'])
 def JobList():
+	dbParams = ()
 	try:
 		dataOffset = int(request.args.get('offset', 0))
 	except:
@@ -934,14 +941,17 @@ def JobList():
 		if not prodID or prodID == '0':
 			sql = " from JobList"
 		else:
-			sql = " from JobList where ProductCode = (select ProductCode from Products where Products.ID = %s limit 1)" % prodID
+			sql = " from JobList where ProductCode = (select ProductCode from Products where Products.ID = %s limit 1)"
+			dbParams += (prodID,)
 	elif not prodID or prodID == '0':
-		sql = " from JobList where LangCode3Ltr = (select LangCode3Ltr from TargetLanguages where TargetLanguages.ID = %s limit 1)" % langID
+		sql = " from JobList where LangCode3Ltr = (select LangCode3Ltr from TargetLanguages where TargetLanguages.ID = %s limit 1)"
+		dbParams += (langID,)
 	else:
-		sql = " from JobList where LangCode3Ltr = (select LangCode3Ltr from TargetLanguages where TargetLanguages.ID = %s limit 1) and ProductCode = (select ProductCode from Products where Products.ID = %s limit 1)" % (langID, prodID)
+		sql = " from JobList where LangCode3Ltr = (select LangCode3Ltr from TargetLanguages where TargetLanguages.ID = %s limit 1) and ProductCode = (select ProductCode from Products where Products.ID = %s limit 1)"
+		dbParams += (langID, prodID,)
 	if not dataRecords or dataRecords == '0':
 # 		logger.debug("Counting total jobs using following SQL:\n"+"select count(TermID) as Records"+sql)
-		cursor.execute("select count(JobID) as Records"+sql)
+		cursor.execute("select count(JobID) as Records"+sql, dbParams)
 		recordCount = cursor.fetchone()
 		if recordCount:
 			dataRecords = recordCount['Records']
@@ -952,18 +962,18 @@ def JobList():
 		if dataOffset >= dataRecords:
 			dataOffset = 0
 # 		logger.debug("Selecting jobs to display using following SQL:\n"+"select *"+sql+" limit %s offset %s" % (dataPageSize, dataOffset))
-		cursor.execute("select *"+sql+" limit %s offset %s" % (dataPageSize, dataOffset))
+		cursor.execute("select *"+sql+" limit %s offset %s", dbParams + (dataPageSize, dataOffset))
 		jobs = cursor.fetchall()
 
 	language = None
 	if langID and langID != '0':
-		cursor.execute("select LangName from TargetLanguages where ID = %s" % langID)
+		cursor.execute("select LangName from TargetLanguages where ID = %s", (langID,))
 		language = cursor.fetchone()
 		if language:
 			language = language['LangName']
 	product = None
 	if prodID and prodID != '0':
-		cursor.execute("select ProductName from Products where ID = %s" % prodID)
+		cursor.execute("select ProductName from Products where ID = %s", (prodID,))
 		product = cursor.fetchone()
 		if product:
 			product = product['ProductName']
@@ -1108,7 +1118,7 @@ def ContentList():
 def archiveForTerm(termID):
 	conn = connectToDB()
 	cursor = conn.cursor(pymysql.cursors.DictCursor)
-	cursor.execute("select TermTranslation, DateTranslated, getUserNameByID(Archive.TranslateUserID) as TranslateUserID from Archive where TermTranslationID = %s order by DateTranslated desc" % termID)
+	cursor.execute("select TermTranslation, DateTranslated, getUserNameByID(Archive.TranslateUserID) as TranslateUserID from Archive where TermTranslationID = %s order by DateTranslated desc", (termID,))
 	archive = cursor.fetchall()
 	conn.close()
 	return render_template('ArchiveList.html',
@@ -1119,7 +1129,7 @@ def archiveForTerm(termID):
 def contextForTerm(termID):
 	conn = connectToDB()
 	cursor = conn.cursor(pymysql.cursors.DictCursor)
-	cursor.execute("select SourceContext, MTofContext, ContentType from TermContexts inner join ContentTypes on ContentTypeID = ContentTypes.ID where TermTranslationID = %s order by SourceContext asc limit 20" % termID)
+	cursor.execute("select SourceContext, MTofContext, ContentType from TermContexts inner join ContentTypes on ContentTypeID = ContentTypes.ID where TermTranslationID = %s order by SourceContext asc limit 20", (termID,))
 	contexts = cursor.fetchall()
 	conn.close()
 	return render_template('ContextList.html',
@@ -1140,7 +1150,7 @@ def commentsForTerm(termID, newComment='0'):
 
 	conn = connectToDB()
 	cursor = conn.cursor(pymysql.cursors.DictCursor)
-	cursor.execute("select ID, Comment, getUserNameByID(TermComments.UserID) as UserID, CommentDate, (TermComments.UserID = '%s') as ToDelete from TermComments where TermTranslationID = %s order by CommentDate desc" % (userID, termID))
+	cursor.execute("select ID, Comment, getUserNameByID(TermComments.UserID) as UserID, CommentDate, (TermComments.UserID = '%s') as ToDelete from TermComments where TermTranslationID = %s order by CommentDate desc", (userID, termID))
 	comments = cursor.fetchall()
 	conn.close()
 	return render_template('CommentsList.html',
@@ -1156,12 +1166,12 @@ def addCommentsForTerm():
 	content = convertContent(request.get_json())
 	conn = connectToDB()
 	cursor = conn.cursor(pymysql.cursors.DictCursor)
-	cursor.execute("insert into TermComments(TermTranslationID, Comment, UserID) values(%s, '%s', '%s')" % (content['TermTranslationID'], conn.escape_string(content['Comment']), conn.escape_string(content['UserID'])))
+	cursor.execute("insert into TermComments(TermTranslationID, Comment, UserID) values(%s, %s, %s)", (content['TermTranslationID'], conn.escape_string(content['Comment']), conn.escape_string(content['UserID'])))
 	cursor.execute("select last_insert_id() as ID")
 	commentID = cursor.fetchone()
-	cursor.execute("update TermTranslations set DateUpdated=CURRENT_TIMESTAMP where ID=%s limit 1" % content['TermTranslationID'])
+	cursor.execute("update TermTranslations set DateUpdated=CURRENT_TIMESTAMP where ID=%s limit 1", (content['TermTranslationID'],))
 	conn.commit()
-	cursor.execute("select CommentDate, getUserNameByID(%s) as UserID from TermComments where ID = %s limit 1" % (content['UserID'], commentID['ID']))
+	cursor.execute("select CommentDate, getUserNameByID(%s) as UserID from TermComments where ID = %s limit 1", (content['UserID'], commentID['ID']))
 	result = cursor.fetchone()
 	content['CommentDate'] = result['CommentDate']
 	content['UserID'] = result['UserID']
@@ -1175,8 +1185,8 @@ def deleteComment():
 	content = convertContent(request.get_json())
 	conn = connectToDB()
 	cursor = conn.cursor()
-	cursor.execute("delete from TermComments where ID = %s" % content['ID'])
-	cursor.execute("update TermTranslations set DateUpdated=CURRENT_TIMESTAMP where ID=%s limit 1" % content['TermID'])
+	cursor.execute("delete from TermComments where ID = %s", (content['ID'],))
+	cursor.execute("update TermTranslations set DateUpdated=CURRENT_TIMESTAMP where ID=%s limit 1", (content['TermID'],))
 	conn.commit()
 	conn.close()
 	return ("", 204)
@@ -1205,9 +1215,9 @@ def translateTerm():
 	else:
 		content['Approved'] = '0'
 # 	logger.debug("update TermTranslations set IgnoreTerm=b'%s', TermTranslation='%s', TranslateUserID='%s', Verified=b'%s', Approved=b'%s' where TermTranslations.ID=%s limit 1" % (content['IgnoreTerm'], conn.escape_string(content['TermTranslation']), content['UserID'], content['Verified'], content['Approved'], content['TermID']))
-	cursor.execute("update TermTranslations set IgnoreTerm=b'%s', TermTranslation='%s', TranslateUserID='%s', Verified=b'%s', Approved=b'%s' where TermTranslations.ID=%s limit 1" % (content['IgnoreTerm'], conn.escape_string(content['TermTranslation']), content['UserID'], content['Verified'], content['Approved'], content['TermID']))
+	cursor.execute("update TermTranslations set IgnoreTerm=b%s, TermTranslation=%s, TranslateUserID=%s, Verified=b%s, Approved=b%s where TermTranslations.ID=%s limit 1", (content['IgnoreTerm'], conn.escape_string(content['TermTranslation']), content['UserID'], content['Verified'], content['Approved'], content['TermID']))
 	conn.commit()
-	cursor.execute("select * from TermList where TermID=%s limit 1" % content['TermID'])
+	cursor.execute("select * from TermList where TermID=%s limit 1", (content['TermID'],))
 	termTranslation = content['TermTranslation']
 	content, = cursor.fetchall()
 	conn.close()
