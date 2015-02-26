@@ -337,7 +337,7 @@ def isSupportedContent(content, conn):
 	if content == "Both":
 		return None
 	cursor = conn.cursor()
-	cursor.execute("select ID from ContentTypes where ContentType='%s' limit 1", (content,))
+	cursor.execute("select ID from ContentTypes where ContentType=%s limit 1", (content,))
 	result = cursor.fetchone()
 	if not result:
 		return None
@@ -345,19 +345,19 @@ def isSupportedContent(content, conn):
 
 def isSupportedProduct(prod, conn):
 	cursor = conn.cursor()
-	cursor.execute("select ProductCode from Products where GlossID = (select GlossID from Products where ProductCode = '%s')", (prod,))
+	cursor.execute("select ProductCode from Products where GlossID = (select GlossID from Products where ProductCode = %s)", (prod,))
 	result = cursor.fetchall()
 	if not result:
 		return None
-	cursor.execute("select ID, GlossID from Products where ProductCode = '%s' limit 1", (prod,))
+	cursor.execute("select ID, GlossID from Products where ProductCode = %s limit 1", (prod,))
 	return (cursor.fetchone(), [p[0] for p in result])
 
 def isSupportedLanguage(lang, conn):
 	cursor = conn.cursor()
-	cursor.execute("select ID, LangCode3Ltr, LangCode2Ltr from TargetLanguages where LangCode2Ltr = '%s' limit 1", (lang,))
+	cursor.execute("select ID, LangCode3Ltr, LangCode2Ltr from TargetLanguages where LangCode2Ltr = %s limit 1", (lang,))
 	result = cursor.fetchone()
 	if not result:
-		cursor.execute("select ID, LangCode3Ltr, LangCode2Ltr from TargetLanguages where LangCode3Ltr = '%s' limit 1", (lang,))
+		cursor.execute("select ID, LangCode3Ltr, LangCode2Ltr from TargetLanguages where LangCode3Ltr = %s limit 1", (lang,))
 		result = cursor.fetchone()
 		if not result:
 			return None
@@ -1153,7 +1153,7 @@ def commentsForTerm(termID, newComment='0'):
 
 	conn = connectToDB()
 	cursor = conn.cursor(pymysql.cursors.DictCursor)
-	cursor.execute("select ID, Comment, getUserNameByID(TermComments.UserID) as UserID, CommentDate, (TermComments.UserID = '%s') as ToDelete from TermComments where TermTranslationID = %s order by CommentDate desc", (userID, termID))
+	cursor.execute("select ID, Comment, getUserNameByID(TermComments.UserID) as UserID, CommentDate, (TermComments.UserID = %s) as ToDelete from TermComments where TermTranslationID = %s order by CommentDate desc", (userID, termID))
 	comments = cursor.fetchall()
 	conn.close()
 	return render_template('CommentsList.html',
