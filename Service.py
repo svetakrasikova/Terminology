@@ -1039,7 +1039,7 @@ def LanguageList():
 			userName = userFirstName + " " + userLastName,
 			STAGING = isStaging)
 
-@app.route('/GenerateReports.html', methods=['GET'])
+@app.route('/GenerateReports.html', methods=['GET']) 
 def generateReports():
 	
 	userID = 0
