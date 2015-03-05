@@ -76,7 +76,7 @@
 #
 #####################
 
-isStaging = True
+isStaging = False
 
 dbName = "Terminology"
 if (isStaging):
@@ -192,11 +192,11 @@ class termHarvestThread (threading.Thread):
 #					termCounter = termCounter + 1
 #					logger.debug(u"inserting source term %s %s, %s" % (termCounter, term[0], term[1]))
 # 					logger.debug("SQL: %s\n" % sql)
-					cursor.execute("insert into SourceTerms(Term) values (%s) on duplicate key update ID=last_insert_id(ID)", (conn.escape_string(term[0]),))
+					cursor.execute("insert into SourceTerms(Term) values (%s) on duplicate key update ID=last_insert_id(ID)", (term[0],))
 					cursor.execute("select last_insert_id()")
 					sourceTermID, = cursor.fetchone()
 #					logger.debug("SQL: %s\n" % sql)
-					cursor.execute("insert into TermTranslations(JobID, SourceTermID, LanguageID, ProductID, GlossID, ContentTypeID, NewTo, DateRequested) values (%s, %s, %s, %s, %s, %s, %s, NULL) on duplicate key update ID=last_insert_id(ID), DateUpdated=CURRENT_TIMESTAMP, ContentTypeID=selectContentTypeID(ContentTypeID, %s)", (jobID, sourceTermID, language[0], products[0][0], products[0][1], contentID, conn.escape_string(term[1]), contentID))
+					cursor.execute("insert into TermTranslations(JobID, SourceTermID, LanguageID, ProductID, GlossID, ContentTypeID, NewTo, DateRequested) values (%s, %s, %s, %s, %s, %s, %s, NULL) on duplicate key update ID=last_insert_id(ID), DateUpdated=CURRENT_TIMESTAMP, ContentTypeID=selectContentTypeID(ContentTypeID, %s)", (jobID, sourceTermID, language[0], products[0][0], products[0][1], contentID, term[1], contentID))
 					cursor.execute("select last_insert_id()")
 					termTranslationID, = cursor.fetchone()
 					sql = "insert into TermContexts(TermTranslationID, ContentTypeID, SourceContext, MTofContext) values "
@@ -204,10 +204,10 @@ class termHarvestThread (threading.Thread):
 					for context in term[2]:
 						if contextDict[context] == "":
 							sql += "(%s, %s, %s, null), "
-							dbparams += (termTranslationID, contentID, conn.escape_string(context))
+							dbparams += (termTranslationID, contentID, context)
 						else:
 							sql += "(%s, %s, %s, %s), "
-							dbparams += (termTranslationID, contentID, conn.escape_string(context), conn.escape_string(contextDict[context]))
+							dbparams += (termTranslationID, contentID, context, contextDict[context])
 					sql = sql[:-2] + " on duplicate key update LastUpdate=NULL, ContentTypeID=selectContentTypeID(ContentTypeID, %s)"
 					dbparams += (contentID,)
 #					logger.debug("SQL: %s\n" % sql)
@@ -486,7 +486,7 @@ def index():
 			userLastName = result.group(3)
 			conn = connectToDB()
 			cursor = conn.cursor()
-			cursor.execute("insert into Users(ID, FirstName, LastName) values(%s, %s, %s) on duplicate key update FirstName=%s, LastName=%s", (userID, conn.escape_string(userFirstName), conn.escape_string(userLastName), conn.escape_string(userFirstName), conn.escape_string(userLastName)))
+			cursor.execute("insert into Users(ID, FirstName, LastName) values(%s, %s, %s) on duplicate key update FirstName=%s, LastName=%s", (userID, userFirstName, userLastName, userFirstName, userLastName))
 			conn.commit()
 			conn.close()
 			session['UserID'] = userID
@@ -531,7 +531,7 @@ def index():
 			userLastName = result.group(3)
 			conn = connectToDB()
 			cursor = conn.cursor()
-			cursor.execute("insert into Users(ID, FirstName, LastName) values(%s, %s, %s) on duplicate key update FirstName=%s, LastName=%s", (userID, conn.escape_string(userFirstName), conn.escape_string(userLastName), conn.escape_string(userFirstName), conn.escape_string(userLastName)))
+			cursor.execute("insert into Users(ID, FirstName, LastName) values(%s, %s, %s) on duplicate key update FirstName=%s, LastName=%s", (userID, userFirstName, userLastName, userFirstName, userLastName))
 			conn.commit()
 			conn.close()
 			session['UserID'] = userID
@@ -654,7 +654,7 @@ def TermList():
 			searchsql = ""
 		else:
 			searchsql = " Term rlike '(^| )%s.*' " 
-			dbParams += (conn.escape_string(search),)
+			dbParams += (search,)
 			
 		if not langID or langID == '0':
 			if not prodID or prodID == '0':
@@ -1249,7 +1249,7 @@ def addCommentsForTerm():
 	content = convertContent(request.get_json())
 	conn = connectToDB()
 	cursor = conn.cursor(pymysql.cursors.DictCursor)
-	cursor.execute("insert into TermComments(TermTranslationID, Comment, UserID) values(%s, %s, %s)", (content['TermTranslationID'], conn.escape_string(content['Comment']), conn.escape_string(content['UserID'])))
+	cursor.execute("insert into TermComments(TermTranslationID, Comment, UserID) values(%s, %s, %s)", (content['TermTranslationID'], content['Comment'], content['UserID']))
 	cursor.execute("select last_insert_id() as ID")
 	commentID = cursor.fetchone()
 	cursor.execute("update TermTranslations set DateUpdated=CURRENT_TIMESTAMP where ID=%s limit 1", (content['TermTranslationID'],))
@@ -1297,8 +1297,7 @@ def translateTerm():
 		content['Approved'] = '1'
 	else:
 		content['Approved'] = '0'
-# 	logger.debug("update TermTranslations set IgnoreTerm=b'%s', TermTranslation='%s', TranslateUserID='%s', Verified=b'%s', Approved=b'%s' where TermTranslations.ID=%s limit 1" % (content['IgnoreTerm'], conn.escape_string(content['TermTranslation']), content['UserID'], content['Verified'], content['Approved'], content['TermID']))
-	cursor.execute("update TermTranslations set IgnoreTerm=b%s, TermTranslation=%s, TranslateUserID=%s, Verified=b%s, Approved=b%s where TermTranslations.ID=%s limit 1", (content['IgnoreTerm'], conn.escape_string(content['TermTranslation']), content['UserID'], content['Verified'], content['Approved'], content['TermID']))
+	cursor.execute("update TermTranslations set IgnoreTerm=b%s, TermTranslation=%s, TranslateUserID=%s, Verified=b%s, Approved=b%s where TermTranslations.ID=%s limit 1", (content['IgnoreTerm'], content['TermTranslation'], content['UserID'], content['Verified'], content['Approved'], content['TermID']))
 	conn.commit()
 	cursor.execute("select * from TermList where TermID=%s limit 1", (content['TermID'],))
 	termTranslation = content['TermTranslation']
