@@ -653,8 +653,7 @@ def TermList():
 		if not search or search == '':
 			searchsql = ""
 		else:
-			searchsql = " Term rlike '(^| )%s.*' " 
-			dbParams += (search,)
+			searchsql = " Term rlike '(^| )%s' " % conn.escape_string(search)
 			
 		if not langID or langID == '0':
 			if not prodID or prodID == '0':
