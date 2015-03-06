@@ -13,7 +13,7 @@
 		</p>
 		
 		<form action="GenerateReports.html">
-			<select name="prodCode" onchange="this.form.submit()">
+			<select name="prodCode" onchange="this.form.submit()" width="300" style="width: 300px">
 			<option value="" >--Select Product--</option>
 			{% for product in products %}
 				<option value="{{ product['ProductCode'] }}" 
@@ -28,8 +28,8 @@
 		<br/>
 		
 		<form action="GenerateReports.html">
-			<select name="langCode" onchange="this.form.submit()">
-				<option value="" >--Select Language--</option>
+			<select name="langCode" onchange="this.form.submit()" width="300" style="width: 300px">
+			<option value="" >--Select Language--</option>
 			{% for lang in langs %}
 				<option value="{{ lang['LangName'] }}" 
 					{% if language and language == lang['LangName'] %} 
