@@ -76,7 +76,7 @@
 #
 #####################
 
-isStaging = False
+isStaging = True
 
 dbName = "Terminology"
 if (isStaging):
@@ -1060,8 +1060,8 @@ def generateReports():
 	lateJobs = latestJobs(cursor)
 	quickAccess = buildQuickAccess(cursor)
 	
-	sql  = "select LangName, VerifyUserID, t1.Modified, t2.LeftAlone from" 
-	sql += " (select TermList.LangName, TermList.VerifyUserID, count(*) as Modified from TermList where Verified = b'1' and IgnoreTerm = b'0'"  
+	sql  = "select LangName, VerifyUserID, t1.Modified, t2.LeftAlone, t2.ProductName from" 
+	sql += " (select TermList.LangName, TermList.VerifyUserID, ProductName, count(*) as Modified from TermList where Verified = b'1' and IgnoreTerm = b'0'"  
 	sql += " and (TermList.TranslateUserID = VerifyUserID or" 
 	sql += " TermList.VerifyUserID in (select getUserNameByID(Archive.TranslateUserID) from Archive where TermTranslationID = TermID))"  
 	sql += " and HasArchive = 1" 
@@ -1076,7 +1076,7 @@ def generateReports():
 	sql += " group by TermList.VerifyUserID"  
 	sql += " order by TermList.LangCode2Ltr asc, TermList.VerifyUserID asc) as t1"  
 	sql += " right join" 
-	sql += " (select TermList.LangName, TermList.VerifyUserID, count(*) as LeftAlone from TermList where Verified = b'1' and IgnoreTerm = b'0'"  
+	sql += " (select TermList.LangName, TermList.VerifyUserID, ProductName, count(*) as LeftAlone from TermList where Verified = b'1' and IgnoreTerm = b'0'"  
 	sql += " and (TermList.TranslateUserID != VerifyUserID and" 
 	sql += " TermList.VerifyUserID not in (select getUserNameByID(Archive.TranslateUserID) from Archive where TermTranslationID = TermID))"  
 	

@@ -46,7 +46,13 @@
 		<div class="tabularContent"><table class="viewTable"> 
 			<thead>
 				<tr>
-					<th nowrap scope="col" align="center">Language Name</th>
+					<th nowrap scope="col" align="center">
+					{% if language %} 
+					Product Name
+					{% else %}
+					Language Name
+					{% endif %}
+					</th>
 					<th nowrap scope="col" align="center">Reviewer</th>
 					<th nowrap scope="col" align="center">Modified</th>
 					<th nowrap scope="col" align="center">Left Alone</th>
@@ -54,7 +60,13 @@
 			</thead>
 			{% for report in reports %}
 				<tr class="{{ loop.cycle('oddRow', 'evenRow') }} trHover">
-					<td scope="row" align="center">{{ report['LangName'] }}</td>
+					<td scope="row" align="center">
+					{% if language %} 
+					{{ report['ProductName'] }}
+					{% else %}
+					{{ report['LangName'] }}
+					{% endif %}
+					</td>
 					<td scope="row" align="center" nowrap>{{ report['VerifyUserID'] }}</td>
 					<td scope="row" align="center" nowrap>{{ report['Modified'] }}</td>
 					<td scope="row" align="center">{{ report['LeftAlone'] }}</td>
