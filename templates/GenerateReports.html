@@ -14,7 +14,7 @@
 		
 		<form action="GenerateReports.html">
 			<select name="prodCode" onchange="this.form.submit()">
-			<option value="" ></option>
+			<option value="" >--Select Product--</option>
 			{% for product in products %}
 				<option value="{{ product['ProductCode'] }}" 
 					{% if prodCode and prodCode == product['ProductCode'] %} 
@@ -29,7 +29,7 @@
 		
 		<form action="GenerateReports.html">
 			<select name="langCode" onchange="this.form.submit()">
-				<option value="" ></option>
+				<option value="" >--Select Language--</option>
 			{% for lang in langs %}
 				<option value="{{ lang['LangName'] }}" 
 					{% if language and language == lang['LangName'] %} 

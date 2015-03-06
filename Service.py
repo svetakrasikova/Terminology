@@ -1091,6 +1091,9 @@ def generateReports():
 	sql += " order by TermList.LangCode2Ltr asc, TermList.VerifyUserID asc) as t2"  
 	sql += " using (VerifyUserID, LangName)"
 	
+	if language:
+		sql += " order by  t2.ProductName"
+	
 	if prodCode:
 		cursor.execute(sql,(prodCode, prodCode))
 	elif language:
