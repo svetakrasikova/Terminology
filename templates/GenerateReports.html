@@ -1,0 +1,76 @@
+{% extends "TermListBase.html" %}
+{% block title %}Target Language List{% endblock %}
+{% block currentJob %}{% endblock currentJob %}
+{% block sidebarLanguages %}{% endblock sidebarLanguages %}
+{% block sidebarProducts %}{{ super() }}{% endblock sidebarProducts %}
+{% block sidebarJobs %}{{ super() }}{% endblock sidebarJobs %}
+{% block contentTypeList %}{{ super() }}{% endblock contentTypeList %}
+{% block content %}
+		<h2>Reports Generation</h2>
+		<p>
+		The table lists all target languages for a specific product and the reviewer with the work done and left.<br/>
+		(The source language is always US English.)
+		</p>
+		
+		<form action="GenerateReports.html">
+			<select name="prodCode" onchange="this.form.submit()" width="300" style="width: 300px">
+			<option value="" >--Select Product--</option>
+			{% for product in products %}
+				<option value="{{ product['ProductCode'] }}" 
+					{% if prodCode and prodCode == product['ProductCode'] %} 
+					selected
+					{% endif %}
+				>{{ product['ProductName'] }}</option>
+			{% endfor %}
+			</select>
+		</form>
+		
+		<br/>
+		
+		<form action="GenerateReports.html">
+			<select name="langCode" onchange="this.form.submit()" width="300" style="width: 300px">
+			<option value="" >--Select Language--</option>
+			{% for lang in langs %}
+				<option value="{{ lang['LangName'] }}" 
+					{% if language and language == lang['LangName'] %} 
+					selected
+					{% endif %}
+				>{{ lang['LangName'] }}</option>
+			{% endfor %}
+			</select>
+		</form>
+		
+		<br/>
+		
+		
+		<div class="tabularContent"><table class="viewTable"> 
+			<thead>
+				<tr>
+					<th nowrap scope="col" align="center">
+					{% if language %} 
+					Product Name
+					{% else %}
+					Language Name
+					{% endif %}
+					</th>
+					<th nowrap scope="col" align="center">Reviewer</th>
+					<th nowrap scope="col" align="center">Modified</th>
+					<th nowrap scope="col" align="center">Left Alone</th>
+				</tr>
+			</thead>
+			{% for report in reports %}
+				<tr class="{{ loop.cycle('oddRow', 'evenRow') }} trHover">
+					<td scope="row" align="center">
+					{% if language %} 
+					{{ report['ProductName'] }}
+					{% else %}
+					{{ report['LangName'] }}
+					{% endif %}
+					</td>
+					<td scope="row" align="center" nowrap>{{ report['VerifyUserID'] }}</td>
+					<td scope="row" align="center" nowrap>{{ report['Modified'] }}</td>
+					<td scope="row" align="center">{{ report['LeftAlone'] }}</td>
+				</tr>
+			{% endfor %}
+			</table></div>
+{% endblock content %}

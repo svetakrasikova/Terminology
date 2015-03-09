@@ -76,7 +76,7 @@
 #
 #####################
 
-isStaging = False
+isStaging = True
 
 dbName = "Terminology"
 if (isStaging):
@@ -814,7 +814,6 @@ def TermList():
 @app.route('/terminology.tbx', methods=['GET'])
 def terminology():
 	
-	
 	jobID = 0
 	langID = 0
 	prodID = 0
@@ -1038,6 +1037,90 @@ def LanguageList():
 			userID = userID,
 			userName = userFirstName + " " + userLastName,
 			STAGING = isStaging)
+
+@app.route('/GenerateReports.html', methods=['GET']) 
+def generateReports():
+	
+	userID = 0
+	userFirstName = ""
+	userLastName = ""
+	
+	if 'UserID' in session:
+		userID = session['UserID']
+		userFirstName = session['UserFirstName']
+		userLastName = session['UserLastName']
+	
+	prodCode = request.args.get('prodCode', '')
+	language = request.args.get('langCode', '')
+	
+	conn = connectToDB()
+	cursor = conn.cursor(pymysql.cursors.DictCursor)
+	
+	lateJobs = latestJobs(cursor)
+	quickAccess = buildQuickAccess(cursor)
+	
+	sql  = "select LangName, VerifyUserID, t1.Modified, t2.LeftAlone, t2.ProductName from" 
+	sql += " (select TermList.LangName, TermList.VerifyUserID, ProductName, count(*) as Modified from TermList where Verified = b'1' and IgnoreTerm = b'0'"  
+	sql += " and (TermList.TranslateUserID = VerifyUserID or" 
+	sql += " TermList.VerifyUserID in (select getUserNameByID(Archive.TranslateUserID) from Archive where TermTranslationID = TermID))"  
+	sql += " and HasArchive = 1" 
+	
+	if prodCode:
+		sql += " and ProductCode = %s"
+	elif language:
+		sql += " and TermList.LangName = %s"
+	else:
+		sql += " and ProductCode = %s"
+		
+	sql += " group by TermList.VerifyUserID"  
+	sql += " order by TermList.LangCode2Ltr asc, TermList.VerifyUserID asc) as t1"  
+	sql += " right join" 
+	sql += " (select TermList.LangName, TermList.VerifyUserID, ProductName, count(*) as LeftAlone from TermList where Verified = b'1' and IgnoreTerm = b'0'"  
+	sql += " and (TermList.TranslateUserID != VerifyUserID and" 
+	sql += " TermList.VerifyUserID not in (select getUserNameByID(Archive.TranslateUserID) from Archive where TermTranslationID = TermID))"  
+	
+	if prodCode:
+		sql += " and ProductCode = %s"
+	elif language:
+		sql += " and TermList.LangName = %s"
+	else:
+		sql += " and ProductCode = %s" 
+	
+	sql += " group by TermList.VerifyUserID"  
+	sql += " order by TermList.LangCode2Ltr asc, TermList.VerifyUserID asc) as t2"  
+	sql += " using (VerifyUserID, LangName)"
+	
+	if language:
+		sql += " order by  t2.ProductName"
+	
+	if prodCode:
+		cursor.execute(sql,(prodCode, prodCode))
+	elif language:
+		cursor.execute(sql,(language, language))
+	else:
+		cursor.execute(sql,(prodCode, prodCode))
+	
+	reports = cursor.fetchall()
+	
+	sql = "select * from ProductList order by productname"
+	cursor.execute(sql)
+	products = cursor.fetchall()
+	
+	sql = "select * from TargetLanguages order by langname"
+	cursor.execute(sql)
+	langs = cursor.fetchall()
+	
+	return render_template('GenerateReports.html',
+		reports = reports,
+		products = products,
+		prodCode = prodCode,
+		langs = langs,
+		language = language,
+		latestJobs = lateJobs,
+		quickAccess = quickAccess,
+		userID = userID,
+		userName = userFirstName + " " + userLastName,
+		STAGING = isStaging)
 
 @app.route('/ProductList.html', methods=['GET'])
 def ProductList():
