@@ -446,17 +446,19 @@ select LangName, VerifyUserID, t1.Modified, t2.LeftAlone from
 and (TermList.TranslateUserID = VerifyUserID or
 	TermList.VerifyUserID in (select getUserNameByID(Archive.TranslateUserID) from Archive where TermTranslationID = TermID))
 and HasArchive = 1
-and ProductCode = 'VLT'
+and ProductCode = 'ACD'
 group by TermList.VerifyUserID
 order by TermList.LangCode2Ltr asc, TermList.VerifyUserID asc) as t1
 right join
 (select TermList.LangName, TermList.VerifyUserID, count(*) as LeftAlone from TermList where Verified = b'1' and IgnoreTerm = b'0'
 and (TermList.TranslateUserID != VerifyUserID and
 	TermList.VerifyUserID not in (select getUserNameByID(Archive.TranslateUserID) from Archive where TermTranslationID = TermID))
-and ProductCode = 'VLT'
+and ProductCode = 'ACD'
 group by TermList.VerifyUserID
 order by TermList.LangCode2Ltr asc, TermList.VerifyUserID asc) as t2
 using (VerifyUserID, LangName)
+
+select * from TermList where Term rlike '(^| )' OR '' = ''
 
 select LangName, count(*) from TermList where IgnoreTerm = b'0' and TranslateUserID is not null
 and ProductCode = 'VLT'
@@ -701,3 +703,13 @@ select * from TermList where Term rlike '(^| )option.*' order by LangCode3Ltr as
 
 select count(TermID) as Records from TermList where Term rlike '(^| )advanced.*'  and LangCode3Ltr = (select LangCode3Ltr from TargetLanguages where ID = 18) order by Term asc, ProductName asc
 select * from TermList where Term rlike '(^| )advanced.*'  and LangCode3Ltr = (select LangCode3Ltr from TargetLanguages where ID = 18) order by Term asc, ProductName asc limit 10 offset 1
+
+
+
+select Term as SourceTerm, TermTranslation as TargetTerm, LangCode3Ltr as TargetLanguage, ProductCode, ProductName from TermList where IgnoreTerm = b'0' and Approved = b'1' and DateUpdated < '2015-02-18' order by ProductCode asc, Term asc, LangCode3Ltr asc
+
+select ID, LangCode3Ltr, LangCode2Ltr from TargetLanguages where LangCode3Ltr = 'csy' limit 1
+select concat_ws(', ', ProductName, LangName) as JobString from Products, TargetLanguages where Products.ID = 4 and TargetLanguages.ID = 32 limit 1
+
+delete from PendingJobs where DatePosted > '2015-02-10' and ProductID = 3
+delete from TermTranslations where JobID in (select ID from PendingJobs where DatePosted > '2015-02-10' and ProductID = 3)
